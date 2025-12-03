@@ -1,0 +1,56 @@
+﻿@page "/"
+@using StoreManagement.Client.Models
+@inject HttpClient Http
+
+<PageTitle>Trang chủ bán sách</PageTitle>
+
+<h1>Danh sách sách hiện có</h1>
+
+@if (books == null)
+{
+    <p><em>Đang tải dữ liệu...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tên sách</th>
+                <th>Giá tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in books)
+            {
+                <tr>
+                    <td>@item.Title</td>
+                    <td>@item.RetailPrice</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Book>? books;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var response = await Http.GetFromJsonAsync<ApiResponse<List<Book>>>("api/products", options);
+            if (response != null && response.Data != null)
+            {
+                books = response.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Lỗi rồi: " + ex.Message);
+        }
+    }
+}
