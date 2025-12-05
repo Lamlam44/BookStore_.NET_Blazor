@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">StoreManagement.Client</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -8,32 +11,60 @@
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
+    <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+
+        @if (userRole == "Admin")
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="employees">
+                    <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Quản lý Nhân viên
+                </NavLink>
+            </div>
+        }
+        @if (userRole == "Staff")
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="timekeeping">
+                    <span class="bi bi-clock-history-nav-menu" aria-hidden="true"></span> Chấm công
+                </NavLink>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(userRole))
+        {
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link" @onclick="Logout">
+                    <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Đăng xuất
+                </button>
+            </div>
+        }
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
+    private string? userRole;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userRole = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "UserRole");
+    }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task Logout()
+    {
+        await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "UserRole");
+        NavigationManager.NavigateTo("/login", forceLoad: true);
     }
 }

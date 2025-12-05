@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -6,6 +9,10 @@
 
     <main>
         <div class="top-row px-4">
+            @if (!string.IsNullOrEmpty(userRole))
+            {
+                <span class="me-3">Xin chào, <strong>@userRole</strong></span>
+            }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -14,3 +21,28 @@
         </article>
     </main>
 </div>
+
+@code {
+    private string? userRole;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Chỉ chạy kiểm tra lần đầu tiên khi giao diện được vẽ ra
+        if (firstRender)
+        {
+            // 1. Lấy quyền từ bộ nhớ
+            userRole = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "UserRole");
+
+            // 2. Nếu không tìm thấy quyền (chưa đăng nhập) -> Đá về trang Login
+            if (string.IsNullOrEmpty(userRole))
+            {
+                Navigation.NavigateTo("/login", forceLoad: true);
+            }
+            else
+            {
+                // Nếu đã đăng nhập thì cập nhật lại giao diện để hiện tên (nếu cần)
+                StateHasChanged();
+            }
+        }
+    }
+}

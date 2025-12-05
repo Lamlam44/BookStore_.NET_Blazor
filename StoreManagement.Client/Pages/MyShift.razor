@@ -1,0 +1,78 @@
+@page "/my-shift"
+
+@* 
+    TODO:
+    - Inject a service to handle shift management.
+    - OnInitializedAsync: Call API to check if there's an active shift for the current user.
+    - StartShift(): Call API to create a new shift record.
+    - EndShift(): Call API to update the existing shift record with end time and cash.
+*@
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card text-center shadow">
+            <div class="card-header">
+                <h4 class="mb-0">Chấm công</h4>
+            </div>
+
+            @if (!isShiftStarted)
+            {
+                <div class="card-body p-4">
+                    <h5 class="card-title">Bắt đầu ca làm việc mới</h5>
+                    <p class="card-text text-muted">Nhập số tiền mặt bạn có khi bắt đầu ca.</p>
+                    <div class="mb-3">
+                        <label for="cashStart" class="form-label">Tiền mặt đầu ca</label>
+                        <div class="input-group">
+                            <input type="number" id="cashStart" class="form-control form-control-lg text-center" @bind="cashStart" placeholder="0" />
+                            <span class="input-group-text">VND</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-success btn-lg w-100" @onclick="StartShift">
+                        <i class="oi oi-play-circle"></i> BẮT ĐẦU CA
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="card-body p-4">
+                     <h5 class="card-title">Bạn đang trong ca làm việc</h5>
+                     <p class="text-muted">Bắt đầu lúc: <strong>@shiftStartTime.ToString("HH:mm:ss, dd/MM/yyyy")</strong></p>
+                    
+                    <div class="mb-3">
+                        <label for="cashEnd" class="form-label">Tiền mặt kết ca</label>
+                        <div class="input-group">
+                            <input type="number" id="cashEnd" class="form-control form-control-lg text-center" @bind="cashEnd" placeholder="0" />
+                            <span class="input-group-text">VND</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-lg w-100" @onclick="EndShift">
+                        <i class="oi oi-media-stop"></i> KẾT THÚC CA
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private bool isShiftStarted = false;
+    private decimal cashStart;
+    private decimal cashEnd;
+    private DateTime shiftStartTime;
+
+    private void StartShift()
+    {
+        // TODO: Call API to start shift
+        Console.WriteLine($"Gọi API bắt đầu ca với số tiền: {cashStart}");
+        isShiftStarted = true;
+        shiftStartTime = DateTime.Now;
+    }
+
+    private void EndShift()
+    {
+        // TODO: Call API to end shift
+        Console.WriteLine($"Gọi API kết thúc ca với số tiền: {cashEnd}");
+        isShiftStarted = false;
+    }
+}

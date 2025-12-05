@@ -1,1 +1,44 @@
 /project_store_management_backend
+## Core .NET Build Folders (Quan trọng nhất)
+# Bỏ qua các thư mục biên dịch (nơi chứa file .dll, .exe rác)
+[Bb]in/
+[Oo]bj/
+
+## Visual Studio & VS Code
+# Bỏ qua các file cấu hình riêng của máy bạn (không nên đẩy lên chung)
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Dependency Directories
+# Bỏ qua các thư mục gói thư viện (nó sẽ tự tải lại khi build)
+node_modules/
+jspm_packages/
+components/
+
+## OS Generated Files
+# Bỏ qua các file rác của Hệ điều hành
+.DS_Store
+Thumbs.db
+
+## Publishing
+# Bỏ qua thư mục khi bạn xuất bản web (Publish)
+**/Properties/PublishProfiles/
+publish/
+web.config
+
+## Environment & Secrets (Bảo mật)
+# Bỏ qua các file chứa key/password nhạy cảm
+.env
+appsettings.Local.json
+appsettings.Development.json
+
+## Blazor Specific
+# Bỏ qua file nén Brotli/Gzip nếu có
+*.br
+*.gz
+# File log lỗi
+*.log

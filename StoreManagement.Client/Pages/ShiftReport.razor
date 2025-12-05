@@ -1,0 +1,121 @@
+@page "/shift-report"
+@using StoreManagement.Client.Models
+
+@* 
+    TODO:
+    - Inject an HttpClient or a dedicated service for shift reports.
+    - Call API to fetch the list of shift histories in OnInitializedAsync.
+    - Add filtering options (by date, by staff).
+*@
+
+<h3 class="mb-4">Báo cáo Lịch sử Ca làm việc</h3>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Lịch sử Ca</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Tên nhân viên</th>
+                        <th>Giờ bắt đầu</th>
+                        <th>Giờ kết thúc</th>
+                        <th>Tiền đầu ca</th>
+                        <th>Tiền cuối ca</th>
+                        <th>Tổng giờ làm</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (shiftHistories == null || !shiftHistories.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center">Không có dữ liệu để hiển thị.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var history in shiftHistories)
+                        {
+                            <tr>
+                                <td>@(history.Staff?.Username ?? "N/A")</td>
+                                <td>@history.StartTime.ToString("HH:mm, dd/MM/yyyy")</td>
+                                <td>@history.EndTime?.ToString("HH:mm, dd/MM/yyyy")</td>
+                                <td>@history.CashStart?.ToString("N0") VND</td>
+                                <td>@history.CashEnd?.ToString("N0") VND</td>
+                                <td>@CalculateTotalHours(history.StartTime, history.EndTime)</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ShiftHistory> shiftHistories = new List<ShiftHistory>();
+
+    protected override void OnInitialized()
+    {
+        LoadShiftHistory();
+    }
+
+    private void LoadShiftHistory()
+    {
+        // Mock data for shift history
+        var staff1 = new Account { Username = "Nguyễn Văn A" };
+        var staff2 = new Account { Username = "Trần Thị B" };
+
+        shiftHistories = new List<ShiftHistory>
+        {
+            new ShiftHistory 
+            {
+                Id = "sh1",
+                Staff = staff1,
+                StartTime = new DateTime(2024, 5, 20, 8, 0, 15),
+                EndTime = new DateTime(2024, 5, 20, 16, 5, 30),
+                CashStart = 1000000,
+                CashEnd = 5500000
+            },
+            new ShiftHistory 
+            {
+                Id = "sh2",
+                Staff = staff2,
+                StartTime = new DateTime(2024, 5, 20, 15, 58, 10),
+                EndTime = new DateTime(2024, 5, 20, 22, 3, 0),
+                CashStart = 500000,
+                CashEnd = 8750000
+            },
+            new ShiftHistory 
+            {
+                Id = "sh3",
+                Staff = staff1,
+                StartTime = new DateTime(2024, 5, 19, 8, 3, 20),
+                EndTime = new DateTime(2024, 5, 19, 16, 1, 15),
+                CashStart = 1000000,
+                CashEnd = 4200000
+            },
+            new ShiftHistory 
+            {
+                Id = "sh4",
+                Staff = staff2,
+                StartTime = new DateTime(2024, 5, 19, 16, 0, 5),
+                EndTime = new DateTime(2024, 5, 19, 22, 8, 45),
+                CashStart = 500000,
+                CashEnd = 9100000
+            }
+        };
+    }
+
+    private string CalculateTotalHours(DateTime start, DateTime? end)
+    {
+        if (end == null)
+        {
+            return "N/A";
+        }
+        var duration = end.Value - start;
+        return $"{duration.Hours} giờ {duration.Minutes} phút";
+    }
+}
