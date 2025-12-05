@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Lenovo\\OneDrive\\Documents\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {}
+    "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Lenovo\\OneDrive\\Documents\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {
+    "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Lenovo\\OneDrive\\Documents\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
+        "projectUniqueName": "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
         "projectName": "StoreManagement.Client",
-        "projectPath": "C:\\Users\\Lenovo\\OneDrive\\Documents\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
-        "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Lenovo\\OneDrive\\Documents\\BookStore_.NET_Blazor\\StoreManagement.Client\\obj\\",
+        "projectPath": "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
+        "packagesPath": "C:\\Users\\loihu\\.nuget\\packages\\",
+        "outputPath": "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\loihu\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -38,7 +38,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "9.0.200"
       },
       "frameworks": {
         "net9.0": {
@@ -56,13 +56,13 @@
             "Microsoft.NET.ILLink.Tasks": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.11, )",
+              "version": "[9.0.4, )",
               "autoReferenced": true
             },
             "Microsoft.NET.Sdk.WebAssembly.Pack": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.11, )",
+              "version": "[9.0.4, )",
               "autoReferenced": true
             }
           },
@@ -80,7 +80,7 @@
           "downloadDependencies": [
             {
               "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
-              "version": "[9.0.11, 9.0.11]"
+              "version": "[9.0.4, 9.0.4]"
             }
           ],
           "frameworkReferences": {
@@ -88,7 +88,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.307/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {

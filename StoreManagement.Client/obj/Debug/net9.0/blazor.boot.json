@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "StoreManagement.Client",
   "resources": {
-    "hash": "sha256-HatvsBb79zzyyRvat2oHvDvFCKBRkRDjnNoVupwfg38=",
+    "hash": "sha256-7j7zj5RL5CvWl44R2dDYdSlTlEXkugyqZjVy7WGeLdo=",
     "fingerprinting": {
       "Microsoft.AspNetCore.Authorization.is84zt9n9u.wasm": "Microsoft.AspNetCore.Authorization.wasm",
       "Microsoft.AspNetCore.Components.3zig3jhz80.wasm": "Microsoft.AspNetCore.Components.wasm",
@@ -195,23 +195,23 @@
       "netstandard.jgp13znru0.wasm": "netstandard.wasm",
       "System.Private.CoreLib.f5mfssf3vz.wasm": "System.Private.CoreLib.wasm",
       "dotnet.js": "dotnet.js",
-      "dotnet.native.noby4tlk4d.js": "dotnet.native.js",
-      "dotnet.native.qe75a9vfqn.wasm": "dotnet.native.wasm",
-      "dotnet.runtime.9o45ky8ejm.js": "dotnet.runtime.js",
+      "dotnet.native.hvg7u8bimp.js": "dotnet.native.js",
+      "dotnet.native.3c4wvb350q.wasm": "dotnet.native.wasm",
+      "dotnet.runtime.cymp1amu5g.js": "dotnet.runtime.js",
       "icudt_CJK.tjcz0u77k5.dat": "icudt_CJK.dat",
       "icudt_EFIGS.tptq2av103.dat": "icudt_EFIGS.dat",
       "icudt_no_CJK.lfu7j35m59.dat": "icudt_no_CJK.dat",
-      "StoreManagement.Client.82e33b33aa.wasm": "StoreManagement.Client.wasm",
-      "StoreManagement.Client.k5uopcrgrz.pdb": "StoreManagement.Client.pdb"
+      "StoreManagement.Client.83rwde5v5e.wasm": "StoreManagement.Client.wasm",
+      "StoreManagement.Client.z97r9tacgf.pdb": "StoreManagement.Client.pdb"
     },
     "jsModuleNative": {
-      "dotnet.native.noby4tlk4d.js": "sha256-p9eEzXhQIsI0a5bBJhfzW15iRafgplTxT8XrO5FiH9o="
+      "dotnet.native.hvg7u8bimp.js": "sha256-LX9rFEWGVxhkOkAVPG0w5RxPwzPBlEUz6dQNjWS7M+M="
     },
     "jsModuleRuntime": {
-      "dotnet.runtime.9o45ky8ejm.js": "sha256-6QIZYgG+ftoT9N1H1EEJeXIhD/qbKqEcnmawDskiwdI="
+      "dotnet.runtime.cymp1amu5g.js": "sha256-dCmS9Zx4egtLYSUgTI3R6gMS+Yg8MkzxW1CgEMJKAEw="
     },
     "wasmNative": {
-      "dotnet.native.qe75a9vfqn.wasm": "sha256-Po2dalLvTpf5jAS+jt0TzuBYybYiL1F6qAacZJ8UAdo="
+      "dotnet.native.3c4wvb350q.wasm": "sha256-89jyB8DlCnV2BPMV477jOe1Sm0WXwVf8RuoSPsj4Ym8="
     },
     "icu": {
       "icudt_CJK.tjcz0u77k5.dat": "sha256-SZLtQnRc0JkwqHab0VUVP7T3uBPSeYzxzDnpxPpUnHk=",
@@ -412,10 +412,10 @@
       "WindowsBase.i7qip04bb5.wasm": "sha256-Lg5W8BM50Cpl1dgTrG9RQOrBRKOJq6H1t5sH3yf4KDU=",
       "mscorlib.ijjuvl21w4.wasm": "sha256-ku4DyQX7IfTdwPwDlrz9odvCs4mrgsJl0fNaqY56KOI=",
       "netstandard.jgp13znru0.wasm": "sha256-I7arRnyxWh5PItslQKjzLIG7EpohJACm7p/7K8eD0YA=",
-      "StoreManagement.Client.82e33b33aa.wasm": "sha256-ELcxvi7PS7/yRMjBOHK+dyujh6MUuVUNkJ/Qwb4pk9w="
+      "StoreManagement.Client.83rwde5v5e.wasm": "sha256-3HkkpaO5De6UZbRuowfSw58sM2+6Ms2uwsjY14/Y1DM="
     },
     "pdb": {
-      "StoreManagement.Client.k5uopcrgrz.pdb": "sha256-qMczQbn13uETbog0QwJ1d4q4lYyyf5SsjfGAJqa4RCc="
+      "StoreManagement.Client.z97r9tacgf.pdb": "sha256-lzpseUOoVRN3BaPqsmUjzVbHl4zyKzaB8kpJm5J2ZI0="
     }
   },
   "cacheBootResources": true,
