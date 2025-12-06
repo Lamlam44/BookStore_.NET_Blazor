@@ -1,4 +1,5 @@
 @page "/employees"
+@using Microsoft.AspNetCore.Components.Forms
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services
 @inject IJSRuntime JSRuntime
@@ -9,7 +10,7 @@
 <div class="row mb-3">
     <div class="col">
         <button class="btn btn-primary" @onclick="OpenAddEmployeeModal">
-            <i class="oi oi-plus"></i> Thêm nhân viên
+            <i class="bi bi-plus-lg"></i> Thêm nhân viên
         </button>
     </div>
 </div>
@@ -19,7 +20,7 @@
         <h5 class="mb-0">Danh sách Nhân viên</h5>
     </div>
     <div class="card-body">
-        <table class="table table-hover">
+        <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>Họ tên</th>
@@ -36,6 +37,10 @@
                 @if (employees == null)
                 {
                     <tr><td colspan="8" class="text-center"><i>Đang tải...</i></td></tr>
+                }
+                else if (employees.Count == 0)
+                {
+                    <tr><td colspan="8" class="text-center"><i>Chưa có nhân viên nào.</i></td></tr>
                 }
                 else
                 {
@@ -55,10 +60,10 @@
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenEditEmployeeModal(emp)">
-                                    <i class="oi oi-pencil"></i> Sửa
+                                    <i class="bi bi-pencil-square"></i> Sửa
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteEmployee(emp)">
-                                    <i class="oi oi-trash"></i> Xóa
+                                    <i class="bi bi-trash"></i> Xóa
                                 </button>
                             </td>
                         </tr>
@@ -69,7 +74,6 @@
     </div>
 </div>
 
-<!-- Add/Edit Employee Modal -->
 <div class="modal fade" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -78,18 +82,18 @@
                 <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <EditForm Model="@currentEmployee" OnValidSubmit="SaveEmployee">
+                <EditForm Model="@currentEmployee" OnSubmit="SaveEmployee">
                     <DataAnnotationsValidator />
                     <ul class="nav nav-tabs" id="employeeTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">Thông tin</button>
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Thông tin</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="account-tab" data-bs-toggle="tab" data-bs-target="#account" type="button" role="tab" aria-controls="account" aria-selected="false">Tài khoản</button>
+                            <button class="nav-link" id="account-tab" data-bs-toggle="tab" data-bs-target="#account" type="button" role="tab">Tài khoản</button>
                         </li>
                     </ul>
-                    <div class="tab-content" id="employeeTabContent">
-                        <div class="tab-pane fade show active p-3" id="info" role="tabpanel" aria-labelledby="info-tab">
+                    <div class="tab-content border border-top-0 p-3 mb-3" id="employeeTabContent">
+                        <div class="tab-pane fade show active" id="info" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Họ tên</label>
@@ -113,7 +117,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade p-3" id="account" role="tabpanel" aria-labelledby="account-tab">
+                        <div class="tab-pane fade" id="account" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Tên đăng nhập</label>
@@ -135,17 +139,17 @@
                                     </InputSelect>
                                 </div>
                                 <div class="col-md-6 mb-3 align-self-center">
-                                    <div class="form-check">
+                                    <div class="form-check mt-4">
                                         <InputCheckbox class="form-check-input" @bind-Value="currentEmployee.Account.IsActive" id="isActiveCheck" />
-                                        <label class="form-check-label" for="isActiveCheck">Kích hoạt</label>
+                                        <label class="form-check-label" for="isActiveCheck">Kích hoạt tài khoản</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer border-top-0">
                         <button type="button" class="btn btn-secondary" @onclick="CloseModal">Hủy</button>
-                        <button type="submit" class="btn btn-primary">Lưu</button>
+                        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
                     </div>
                 </EditForm>
             </div>
@@ -158,31 +162,9 @@
     private Employee currentEmployee = new();
     private string modalTitle = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        // --- MOCK DATA LOADING ---
         LoadMockEmployees();
-
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
-        try
-        {
-            var apiResponse = await ApiService.GetEmployeesAsync();
-            if(apiResponse.Success)
-            {
-                employees = apiResponse.Data;
-            }
-            else
-            {
-                // Handle error message, e.g., show a toast
-                Console.WriteLine(apiResponse.Message);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error fetching employees: {ex.Message}");
-        }
-        */
     }
 
     private void LoadMockEmployees()
@@ -202,16 +184,18 @@
         };
     }
 
-    private void OpenAddEmployeeModal()
+    private async Task OpenAddEmployeeModal()
     {
         currentEmployee = new Employee();
+        // Khởi tạo sẵn account để tránh lỗi null khi binding
+        currentEmployee.Account = new EmployeeAccount { Role = EmployeeRole.Staff, IsActive = true };
         modalTitle = "Thêm nhân viên mới";
-        OpenModal();
+        await OpenModal();
     }
 
-    private void OpenEditEmployeeModal(Employee employee)
+    private async Task OpenEditEmployeeModal(Employee employee)
     {
-        // In a real app, you might want to clone the object to avoid modifying the list directly before saving.
+        // Clone dữ liệu để binding không ảnh hưởng trực tiếp đến list
         currentEmployee = new Employee {
             Id = employee.Id,
             Name = employee.Name,
@@ -221,86 +205,68 @@
             Account = new EmployeeAccount
             {
                 Username = employee.Account.Username,
-                Password = "", // Never pre-fill password
+                Password = "", // Để trống password khi sửa
                 Role = employee.Account.Role,
                 IsActive = employee.Account.IsActive
             }
         };
-        modalTitle = $"Sửa thông tin nhân viên: {employee.Name}";
-        OpenModal();
+        modalTitle = $"Sửa: {employee.Name}";
+        await OpenModal();
     }
 
     private async Task SaveEmployee()
     {
-        // --- MOCK SAVE LOGIC ---
-        if (string.IsNullOrEmpty(currentEmployee.Id))
+        var empToSave = new Employee
         {
-            currentEmployee.Id = Guid.NewGuid().ToString();
-            employees.Add(currentEmployee);
+            Id = currentEmployee.Id,
+            Name = currentEmployee.Name,
+            DateOfBirth = currentEmployee.DateOfBirth,
+            Phone = currentEmployee.Phone,
+            Position = currentEmployee.Position,
+            Account = new EmployeeAccount 
+            { 
+                Username = currentEmployee.Account.Username,
+                Password = currentEmployee.Account.Password,
+                Role = currentEmployee.Account.Role,
+                IsActive = currentEmployee.Account.IsActive
+            }
+        };
+
+        if (string.IsNullOrEmpty(empToSave.Id))
+        {
+            // Thêm mới
+            empToSave.Id = Guid.NewGuid().ToString();
+            employees.Add(empToSave);
         }
         else
         {
-            var index = employees.FindIndex(e => e.Id == currentEmployee.Id);
+            // Sửa
+            var index = employees.FindIndex(e => e.Id == empToSave.Id);
             if (index != -1)
             {
-                employees[index] = currentEmployee;
+                employees[index] = empToSave;
             }
         }
-
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
-        try
-        {
-            if (string.IsNullOrEmpty(currentEmployee.Id))
-            {
-                await ApiService.CreateEmployeeAsync(currentEmployee);
-            }
-            else
-            {
-                await ApiService.UpdateEmployeeAsync(currentEmployee.Id, currentEmployee);
-            }
-            // Refresh list from server
-            // await OnInitializedAsync(); 
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error saving employee: {ex.Message}");
-        }
-        */
-
-        CloseModal();
+        
+        // OnSubmit của EditForm sẽ tự động gọi StateHasChanged sau khi hàm này hoàn tất.
+        await CloseModal();
     }
 
-    private async Task DeleteEmployee(Employee employee)
+    private void DeleteEmployee(Employee employee)
     {
-        // --- MOCK DELETE LOGIC ---
         employees.Remove(employee);
-
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
-        try
-        {
-            await ApiService.DeleteEmployeeAsync(employee.Id);
-            // Refresh list from server
-            // await OnInitializedAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error deleting employee: {ex.Message}");
-        }
-        */
+        // Với @onclick thông thường, chúng ta cần gọi StateHasChanged() thủ công để báo cho Blazor biết UI cần được vẽ lại.
+        StateHasChanged();
     }
 
-    private async void OpenModal()
+    // --- JS INTEROP ---
+    private async Task OpenModal()
     {
-        // Gọi hàm showModal bên index.html
         await JSRuntime.InvokeVoidAsync("showModal", "employeeModal");
     }
 
-    // Sửa lại hàm này
-    private async void CloseModal()
+    private async Task CloseModal()
     {
-        // Gọi hàm hideModal bên index.html
         await JSRuntime.InvokeVoidAsync("hideModal", "employeeModal");
     }
 }
