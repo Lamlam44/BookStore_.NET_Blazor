@@ -195,6 +195,30 @@ namespace StoreManagement.Client.Services
         {
             await _http.DeleteAsync($"api/vouchers/{id}");
         }
+        public async Task<List<Book>> SearchBooksAsync(string keyword)
+        {
+            try 
+            {
+                var url = $"api/products/search?Query={keyword}&PageNumber=1&PageSize=10";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>(url);
+                return response?.Data?.Items ?? new List<Book>();
+            }
+            catch { return new List<Book>(); }
+        }
+
+        // 2. Hàm lấy tất cả Danh mục
+        public async Task<List<Category>> GetAllCategoriesAsync()
+        {
+        try
+            {
+                var response = await _http.GetFromJsonAsync<ApiResponse<List<Category>>>("api/categories");
+                return response?.Data ?? new List<Category>();
+            }
+            catch 
+            { 
+                return new List<Category>(); 
+            }
+        }
         // ==========================================
         // CÁC HÀM KHÁC (GIỮ NGUYÊN HOẶC IMPLEMENT SAU)
         // ==========================================

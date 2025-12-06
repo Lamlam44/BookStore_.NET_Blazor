@@ -76,7 +76,9 @@ namespace StoreManagement.Client.Services
         {
             return Task.CompletedTask;
         }
-
+        // Thêm vào MockDataService.cs (nếu còn dùng)
+        public Task<List<Category>> GetAllCategoriesAsync() => Task.FromResult(new List<Category>());
+        public Task<List<Book>> SearchBooksAsync(string keyword) => Task.FromResult(new List<Book>());
         // --- VOUCHERS (GIỮ NGUYÊN) ---
         public Task<List<Voucher>> GetVouchersAsync() => Task.FromResult(_vouchers);
 
