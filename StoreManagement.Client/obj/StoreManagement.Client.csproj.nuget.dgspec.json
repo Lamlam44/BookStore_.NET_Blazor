@@ -1,30 +1,30 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {}
+    "D:\\code\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {}
   },
   "projects": {
-    "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {
+    "D:\\code\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
+        "projectUniqueName": "D:\\code\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
         "projectName": "StoreManagement.Client",
-        "projectPath": "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
+        "projectPath": "D:\\code\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\StoreManagement.Client.csproj",
         "packagesPath": "C:\\Users\\loihu\\.nuget\\packages\\",
-        "outputPath": "D:\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\obj\\",
+        "outputPath": "D:\\code\\Net\\BookStore_.NET_Blazor\\StoreManagement.Client\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\loihu\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net9.0"
+          "net8.0"
         ],
         "sources": {
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net9.0": {
-            "targetAlias": "net9.0",
+          "net8.0": {
+            "targetAlias": "net8.0",
             "projectReferences": {}
           }
         },
@@ -41,22 +41,21 @@
         "SdkAnalysisLevel": "9.0.200"
       },
       "frameworks": {
-        "net9.0": {
-          "targetAlias": "net9.0",
+        "net8.0": {
+          "targetAlias": "net8.0",
           "dependencies": {
             "Microsoft.AspNetCore.Components.WebAssembly": {
               "target": "Package",
-              "version": "[9.0.11, )"
+              "version": "[8.0.10, )"
             },
             "Microsoft.AspNetCore.Components.WebAssembly.DevServer": {
-              "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.11, )"
+              "version": "[8.0.10, )"
             },
             "Microsoft.NET.ILLink.Tasks": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[9.0.4, )",
+              "version": "[8.0.15, )",
               "autoReferenced": true
             },
             "Microsoft.NET.Sdk.WebAssembly.Pack": {
@@ -79,8 +78,20 @@
           "warn": true,
           "downloadDependencies": [
             {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[8.0.15, 8.0.15]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[8.0.15, 8.0.15]"
+            },
+            {
               "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
-              "version": "[9.0.4, 9.0.4]"
+              "version": "[8.0.15, 8.0.15]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[8.0.15, 8.0.15]"
             }
           ],
           "frameworkReferences": {
