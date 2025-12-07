@@ -23,5 +23,7 @@ namespace StoreManagement.Client.Services
         Task<List<Book>> SearchBooksAsync(string keyword);
 
         Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
+
+        
     }
 }
