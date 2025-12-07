@@ -1,10 +1,8 @@
-## --- Core .NET Build Folders (Quan trọng nhất) ---
-# Bỏ qua các thư mục biên dịch (nơi chứa file rác .dll, .exe)
+## --- 1. CORE BUILD (Không thể thiếu cho .NET/Blazor) ---
 [Bb]in/
 [Oo]bj/
 
-## --- Visual Studio & VS Code ---
-# Bỏ qua các file cấu hình riêng của máy (không đẩy lên chung)
+## --- 2. VISUAL STUDIO & TOOLS (Cấu hình máy cá nhân) ---
 .vs/
 .vscode/
 *.user
@@ -12,48 +10,49 @@
 *.userosscache
 *.sln.docstates
 
-## --- Dependency Directories ---
-# Bỏ qua các thư mục gói thư viện
-node_modules/
-jspm_packages/
-components/
+## --- 3. DEPENDENCIES & NUGET (Phần bị thiếu lúc nãy) ---
+# Các gói thư viện tải về
 packages/
 *.nupkg
 *.snupkg
+# File khóa phiên bản (đôi khi gây conflict nếu làm team)
 project.lock.json
+project.fragment.lock.json
+artifacts/
 
-## --- OS Generated Files ---
-# Bỏ qua file rác của Hệ điều hành
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-## --- Publishing ---
-# Bỏ qua thư mục khi xuất bản web (Publish)
-**/Properties/PublishProfiles/
-publish/
-web.config
-
-## --- Blazor Specific (Quan trọng cho dự án của bạn) ---
-# Bỏ qua các file framework tự sinh của Blazor WASM
+## --- 4. BLAZOR SPECIFIC (Dành riêng cho Frontend của bạn) ---
+# File framework tự sinh
 wwwroot/_framework/
-# Bỏ qua file nén Brotli/Gzip
+# File nén
 wwwroot/*.gz
 wwwroot/*.br
 *.br
 *.gz
+# Thư viện JS nếu có dùng
+node_modules/
 
-## --- Logs ---
-# File log lỗi
+## --- 5. PUBLISH & DEPLOY (Phần bị thiếu lúc nãy) ---
+# Quan trọng khi bạn build ra file để nộp đồ án
+**/Properties/PublishProfiles/
+publish/
+web.config
+
+## --- 6. LOGS & DIAGNOSTICS (Phần bị thiếu lúc nãy) ---
 *.log
 logs/
+TestResults/
 
-## --- Environment & Secrets (Bảo mật) ---
-# Bỏ qua các file chứa key/password nhạy cảm và cấu hình local
-.env
-appsettings.Local.json
+## --- 7. OS FILES (File rác hệ điều hành) ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+## --- 8. SECRETS (Bảo mật) ---
 appsettings.Development.json
+appsettings.Local.json
+.env
 *.pfx
 *.key
-*.pem
+
+## --- 9. OTHERS (Các file khác không cần thiết) ---
+project_store_management_backend
