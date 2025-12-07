@@ -1,0 +1,183 @@
+@page "/receipts/create"
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+@inject NavigationManager NavManager
+
+<h3>📝 Tạo Phiếu Nhập Kho</h3>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm p-3 mb-3">
+            <h5 class="card-title text-primary">Thông tin phiếu</h5>
+            
+            <div class="mb-3">
+                <label class="form-label">Nhà cung cấp:</label>
+                <select class="form-select" @bind="newReceipt.SupplierId">
+                    <option value="">-- Chọn nhà cung cấp --</option>
+                    @if (suppliers != null)
+                    {
+                        foreach (var s in suppliers)
+                        {
+                            <option value="@s.Id">@s.SupplierName</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Ngày nhập:</label>
+                <input type="date" class="form-control" @bind="newReceipt.ReceiptDate" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Nhân viên nhập:</label>
+                <input type="text" class="form-control" value="NV001 - Admin" disabled />
+            </div>
+
+            <hr />
+            <div class="d-flex justify-content-between align-items-center">
+                <h5>Tổng tiền:</h5>
+                <h4 class="text-danger fw-bold">@CalculateTotalCost().ToString("N0") đ</h4>
+            </div>
+
+            <button class="btn btn-success w-100 mt-3" @onclick="SaveReceipt">
+                <i class="bi bi-save"></i> Lưu Phiếu Nhập
+            </button>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm p-3">
+            <h5 class="card-title">Chi tiết hàng nhập</h5>
+            
+            <div class="row g-2 align-items-end mb-3 bg-light p-2 rounded">
+                <div class="col-md-4">
+                    <label class="small">Sách:</label>
+                    <select class="form-select form-select-sm" @bind="tempBookId">
+                        <option value="">-- Chọn sách --</option>
+                        @if (books != null)
+                        {
+                            foreach (var b in books)
+                            {
+                                <option value="@b.Id">@b.Title</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="small">Số lượng:</label>
+                    <input type="number" class="form-control form-select-sm" @bind="tempQty" min="1" />
+                </div>
+                <div class="col-md-3">
+                    <label class="small">Giá nhập:</label>
+                    <input type="number" class="form-control form-select-sm" @bind="tempUnitCost" />
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm w-100" @onclick="AddDetail">Thêm</button>
+                </div>
+            </div>
+
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>Sách</th>
+                        <th class="text-center">SL</th>
+                        <th class="text-end">Đơn giá</th>
+                        <th class="text-end">Thành tiền</th>
+                        <th class="text-center">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var detail in receiptDetailsList)
+                    {
+                        <tr>
+                            <td>@GetBookTitle(detail.BookId)</td>
+                            <td class="text-center">@detail.QuantityReceived</td>
+                            <td class="text-end">@detail.UnitCost.ToString("N0")</td>
+                            <td class="text-end">@detail.TotalLineCost.ToString("N0")</td>
+                            <td class="text-center">
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveDetail(detail)">X</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Data lists
+    private List<Supplier> suppliers;
+    private List<Book> books;
+
+    // Main Model
+    private InventoryReceipt newReceipt = new InventoryReceipt { ReceiptDate = DateTime.Now };
+    
+    // Local list để hiển thị trên UI trước khi lưu
+    private List<ReceiptDetail> receiptDetailsList = new List<ReceiptDetail>();
+
+    // Temp inputs
+    private string tempBookId;
+    private int tempQty = 1;
+    private decimal tempUnitCost = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        suppliers = await StoreService.GetSuppliersAsync();
+        books = await StoreService.GetBooksAsync();
+    }
+
+    private void AddDetail()
+    {
+        if (string.IsNullOrEmpty(tempBookId) || tempQty <= 0) return;
+
+        var detail = new ReceiptDetail
+        {
+            Id = Guid.NewGuid().ToString(), // BaseEntity ID
+            BookId = tempBookId,
+            QuantityReceived = tempQty,
+            UnitCost = tempUnitCost,
+            TotalLineCost = tempQty * tempUnitCost
+        };
+
+        receiptDetailsList.Add(detail);
+
+        // Reset inputs
+        tempQty = 1;
+        // tempUnitCost giữ nguyên để tiện nhập tiếp
+    }
+
+    private void RemoveDetail(ReceiptDetail detail)
+    {
+        receiptDetailsList.Remove(detail);
+    }
+
+    private decimal CalculateTotalCost()
+    {
+        return receiptDetailsList.Sum(x => x.TotalLineCost);
+    }
+
+    private string GetBookTitle(string bookId)
+    {
+        return books.FirstOrDefault(b => b.Id == bookId)?.Title ?? "Unknown";
+    }
+
+    private async Task SaveReceipt()
+    {
+        if (string.IsNullOrEmpty(newReceipt.SupplierId) || receiptDetailsList.Count == 0)
+        {
+            // Có thể thêm Toast thông báo lỗi ở đây
+            return;
+        }
+
+        // Map dữ liệu vào object chính
+        newReceipt.ReceivingStaffId = "NV-MOCK-ID"; // Giả lập staff ID
+        newReceipt.TotalCost = CalculateTotalCost();
+        newReceipt.ReceiptDetails = receiptDetailsList; // ICollection assignment
+
+        await StoreService.CreateReceiptAsync(newReceipt);
+        NavManager.NavigateTo("/inventory");
+    }
+}

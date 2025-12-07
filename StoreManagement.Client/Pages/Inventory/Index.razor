@@ -1,0 +1,89 @@
+@page "/inventory"
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+
+<h3>📦 Quản Lý Kho Hàng & Tồn Kho</h3>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Sắp hết hàng</h5>
+                <p class="card-text fs-4">@books?.Count(b => b.StockQuantity <= 5)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Tổng sản phẩm</h5>
+                <p class="card-text fs-4">@books?.Count</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (books == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Sách</th>
+                <th>Giá Bán</th>
+                <th>Nhập/Xuất/Tồn</th>
+                <th>Trạng thái</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in books)
+            {
+                // Logic cảnh báo màu sắc
+                var rowClass = book.StockQuantity == 0 ? "table-danger" : (book.StockQuantity <= 5 ? "table-warning" : "");
+                
+                <tr class="@rowClass">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="@book.Image" style="width: 40px; margin-right: 10px;" />
+                            <div>
+                                <strong>@book.Title</strong><br/>
+                                <small>@book.Isbn</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>@book.RetailPrice.ToString("N0") đ</td>
+                    <td>
+                        <div>Tồn hiện tại: <strong>@book.StockQuantity</strong></div>
+                        <small class="text-muted">Đã bán: (Chưa có POS)</small>
+                    </td>
+                    <td>
+                        @if (book.StockQuantity == 0)
+                        {
+                            <span class="badge bg-danger">HẾT HÀNG</span>
+                        }
+                        else if (book.StockQuantity <= 5)
+                        {
+                            <span class="badge bg-warning text-dark">SẮP HẾT (@book.StockQuantity)</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Sẵn sàng</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Book> books;
+    protected override async Task OnInitializedAsync()
+    {
+        books = await StoreService.GetBooksAsync();
+    }
+}

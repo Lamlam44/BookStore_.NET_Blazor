@@ -1,0 +1,73 @@
+@page "/suppliers/{id}"
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+
+@if (supplier == null)
+{
+    <p>Đang tải hoặc không tìm thấy...</p>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4>🏢 @supplier.SupplierName</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>Người liên hệ:</strong> @supplier.ContactPerson</p>
+            <p><strong>SĐT:</strong> @supplier.Phone</p>
+            <p><strong>Địa chỉ:</strong> @supplier.Address</p>
+        </div>
+    </div>
+
+    <h4>📜 Lịch sử nhập hàng</h4>
+    @if (supplier.InventoryReceipts == null || !supplier.InventoryReceipts.Any())
+    {
+        <div class="alert alert-info">Chưa có phiếu nhập nào từ nhà cung cấp này.</div>
+    }
+    else
+    {
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Ngày nhập</th>
+                    <th>Người nhập</th>
+                    <th>Tổng tiền</th>
+                    <th>Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var receipt in supplier.InventoryReceipts.OrderByDescending(x => x.ReceiptDate))
+                {
+                    <tr>
+                        <td>@receipt.ReceiptDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@receipt.ReceivingStaffId</td>
+                        <td class="text-end fw-bold">@receipt.TotalCost.ToString("N0") đ</td>
+                        <td>
+                            <ul>
+                                @foreach(var detail in receipt.ReceiptDetails)
+                                {
+                                    <li>@GetBookName(detail.BookId) (SL: @detail.QuantityReceived)</li>
+                                }
+                            </ul>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter] public string Id { get; set; }
+    private Supplier? supplier;
+    private List<Book> books = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        books = await StoreService.GetBooksAsync(); // Lấy list sách để hiển thị tên
+        supplier = await StoreService.GetSupplierWithHistoryAsync(Id);
+    }
+
+    private string GetBookName(string bookId) => books.FirstOrDefault(b => b.Id == bookId)?.Title ?? bookId;
+}

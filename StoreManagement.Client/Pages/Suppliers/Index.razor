@@ -1,0 +1,272 @@
+@page "/suppliers"
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+@inject IJSRuntime JSRuntime
+
+<style>
+    /* --- Overlay nền mờ --- */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.55);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 2000;
+    }
+
+    /* --- Khung popup --- */
+    .custom-modal {
+        background: white;
+        width: 700px; /* Rộng hơn xíu để vừa các trường địa chỉ */
+        max-width: 90%;
+        border-radius: 12px;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+        display: flex; flex-direction: column;
+        animation: popupShow 0.25s ease-out;
+    }
+
+    /* Animation hiện lên */
+    @@keyframes popupShow {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+        padding: 15px 20px;
+        background: #0d6efd; /* Màu xanh dương cho NCC */
+        color: white;
+        border-radius: 12px 12px 0 0;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #ddd;
+        text-align: right;
+        background: #f8f9fa;
+        border-radius: 0 0 12px 12px;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>🏢 Nhà Cung Cấp</h3>
+    
+    <div class="d-flex gap-2">
+        <div class="input-group">
+            <input type="text" 
+                   class="form-control" 
+                   placeholder="Nhập tên, SĐT..." 
+                   @bind="searchTerm" 
+                   @bind:event="oninput" 
+                   @onkeyup="HandleEnterKey" />
+            <button class="btn btn-outline-secondary" type="button" @onclick="SearchData">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+
+        <button class="btn btn-primary text-nowrap" @onclick="ShowCreateForm">
+            <i class="bi bi-plus-lg"></i> Thêm mới
+        </button>
+    </div>
+</div>
+
+@* --- DANH SÁCH NHÀ CUNG CẤP --- *@
+@if (suppliers == null)
+{
+    @* Trạng thái 1: Đang tải từ API *@
+    <div class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
+    </div>
+}
+else if (suppliers.Count == 0)
+{
+    @* Trạng thái 2: Tải xong nhưng không có dữ liệu *@
+    <div class="alert alert-warning text-center mt-4">
+        <i class="bi bi-inbox fs-4"></i> <br/>
+        Hiện chưa có nhà cung cấp nào. Hãy bấm "Thêm Nhà Cung Cấp" để tạo mới.
+    </div>
+}
+else
+{
+    @* Trạng thái 3: Có dữ liệu -> Hiển thị thẻ Card *@
+    <div class="row">
+        @foreach (var item in suppliers)
+        {
+            // ... (Giữ nguyên phần hiển thị Card của bạn) ...
+             <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary fw-bold mb-3">@item.SupplierName</h5>
+                        
+                        <div class="mb-2">
+                            <i class="bi bi-person-badge text-secondary me-2"></i> 
+                            <span class="fw-bold">LH:</span> @item.ContactPerson
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-telephone text-secondary me-2"></i> 
+                            <span>@item.Phone</span>
+                        </div>
+                        <div class="small text-muted border-top pt-2 mt-2">
+                            <i class="bi bi-geo-alt me-1"></i> @item.Address
+                        </div>
+                    </div>
+
+                    @* --- PHẦN NÚT BẤM ĐƯỢC ĐƯA RA NGOÀI --- *@
+                    <div class="card-footer bg-white border-0 pb-3">
+                        <div class="d-flex gap-2 mb-2">
+                            <button class="btn btn-warning btn-sm flex-fill text-dark" @onclick="() => ShowEditForm(item)">
+                                <i class="bi bi-pencil-square"></i> Sửa
+                            </button>
+                        </div>
+                        <a href="/suppliers/@item.Id" class="btn btn-primary w-100 btn-sm">
+                            <i class="bi bi-clock-history"></i> Xem lịch sử nhập
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* --- POPUP FORM (MODAL) --- *@
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseFormOutside">
+        <div class="custom-modal" @onclick:stopPropagation="true">
+
+            <div class="modal-header">
+                <h5 class="mb-0">
+                    @(string.IsNullOrEmpty(currentSupplier.Id) ? "✨ Thêm Nhà Cung Cấp Mới" : "✏️ Cập Nhật Thông Tin")
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CancelForm"></button>
+            </div>
+
+            <div class="modal-body">
+                <EditForm id="supplierForm" Model="currentSupplier" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên Nhà Cung Cấp (*)</label>
+                        <InputText class="form-control" @bind-Value="currentSupplier.SupplierName" placeholder="VD: Công ty Sách Phương Nam" />
+                        <ValidationMessage For="@(() => currentSupplier.SupplierName)" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Người liên hệ</label>
+                            <InputText class="form-control" @bind-Value="currentSupplier.ContactPerson" placeholder="VD: Anh Nam" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Số điện thoại</label>
+                            <InputText class="form-control" @bind-Value="currentSupplier.Phone" placeholder="090..." />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Địa chỉ</label>
+                        <InputTextArea class="form-control" @bind-Value="currentSupplier.Address" rows="3" />
+                    </div>
+                </EditForm>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary me-2" @onclick="CancelForm">Hủy bỏ</button>
+                <button type="submit" form="supplierForm" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Lưu thông tin
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    private List<Supplier> suppliers;
+    private bool showForm = false;
+    private Supplier currentSupplier = new Supplier();
+    private string searchTerm = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            suppliers = await StoreService.GetSuppliersAsync();
+        }
+        else
+        {
+            suppliers = await StoreService.SearchSuppliersAsync(searchTerm);
+        }
+    }
+    private async Task SearchData()
+    {
+        await LoadData();
+    }
+
+    // Xử lý khi nhấn Enter trong ô input
+    private async Task HandleEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchData();
+        }
+        // Tùy chọn: Nếu muốn tìm ngay khi xóa trắng ô input
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            await LoadData();
+        }
+    }
+
+    // --- FORM LOGIC ---
+
+    private void ShowCreateForm()
+    {
+        currentSupplier = new Supplier(); // Reset form
+        currentSupplier.Id = string.Empty;
+        showForm = true;
+    }
+
+    private void ShowEditForm(Supplier s)
+    {
+        // Clone object để tránh sửa trực tiếp vào list bên ngoài khi chưa bấm Lưu
+        currentSupplier = new Supplier
+        {
+            Id = s.Id,
+            SupplierName = s.SupplierName,
+            ContactPerson = s.ContactPerson,
+            Phone = s.Phone,
+            Address = s.Address,
+            InventoryReceipts = s.InventoryReceipts // Giữ tham chiếu lịch sử nhập (nếu cần)
+        };
+        showForm = true;
+    }
+
+    private void CancelForm() => showForm = false;
+    private void CloseFormOutside() => showForm = false;
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrEmpty(currentSupplier.Id))
+            await StoreService.CreateSupplierAsync(currentSupplier);
+        else
+            await StoreService.UpdateSupplierAsync(currentSupplier);
+
+        showForm = false;
+        await LoadData();
+    }
+
+}

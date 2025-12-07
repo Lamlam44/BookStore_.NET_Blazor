@@ -3,7 +3,7 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">StoreManagement.Client</a>
+        <a class="navbar-brand" href="">Store Management</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -14,7 +14,7 @@
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Trang Chủ
             </NavLink>
         </div>
 
@@ -43,6 +43,30 @@
                 </button>
             </div>
         }
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="inventory">
+                <span class="bi bi-book-half" aria-hidden="true"></span> Kho Sách
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="receipts/create">
+                <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Nhập Hàng
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="suppliers">
+                <span class="bi bi-truck" aria-hidden="true"></span> Nhà Cung Cấp
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="vouchers">
+                <span class="bi bi-ticket-perforated-fill" aria-hidden="true"></span> Khuyến Mãi
+            </NavLink>
+        </div>
     </nav>
 </div>
 
