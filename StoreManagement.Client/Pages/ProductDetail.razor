@@ -1,0 +1,9 @@
+@page "/products/{Id}"
+@layout StoreManagement.Client.Layout.CustomerLayout
+
+<h3>Product Detail</h3>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+}

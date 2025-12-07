@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject CartService CartService
+@inject AuthenticationStateProvider AuthProvider
+@implements IDisposable
 
 <div class="page">
     <div class="sidebar">
@@ -9,11 +11,23 @@
 
     <main>
         <div class="top-row px-4">
-            @if (!string.IsNullOrEmpty(userRole))
-            {
-                <span class="me-3">Xin chào, <strong>@userRole</strong></span>
-            }
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <span class="me-3">Xin chào, <strong>@context.User.Identity?.Name</strong></span>
+                    <a href="/profile">Trang cá nhân</a>
+                    <a href="/order-history" class="ms-3">Lịch sử mua hàng</a>
+                    <button class="btn btn-link ms-3" @onclick="Logout">Đăng xuất</button>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login" class="ms-3">Nhân viên</a>
+                    <a href="/customer-login" class="ms-3">Đăng nhập</a>
+                    <a href="/customer-register" class="ms-3">Đăng ký</a>
+                </NotAuthorized>
+            </AuthorizeView>
+
+            <a href="/cart" class="ms-auto">
+                <span class="oi oi-cart" aria-hidden="true"></span> Giỏ hàng (@CartService.GetCartItems().Count)
+            </a>
         </div>
 
         <article class="content px-4">
@@ -23,26 +37,20 @@
 </div>
 
 @code {
-    private string? userRole;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
     {
-        // Chỉ chạy kiểm tra lần đầu tiên khi giao diện được vẽ ra
-        if (firstRender)
-        {
-            // 1. Lấy quyền từ bộ nhớ
-            userRole = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "UserRole");
+        CartService.OnChange += StateHasChanged;
+    }
 
-            // 2. Nếu không tìm thấy quyền (chưa đăng nhập) -> Đá về trang Login
-            if (string.IsNullOrEmpty(userRole))
-            {
-                Navigation.NavigateTo("/login", forceLoad: true);
-            }
-            else
-            {
-                // Nếu đã đăng nhập thì cập nhật lại giao diện để hiện tên (nếu cần)
-                StateHasChanged();
-            }
-        }
+    private async Task Logout()
+    {
+        var customAuthProvider = (CustomAuthenticationStateProvider)AuthProvider;
+        await customAuthProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        CartService.OnChange -= StateHasChanged;
     }
 }

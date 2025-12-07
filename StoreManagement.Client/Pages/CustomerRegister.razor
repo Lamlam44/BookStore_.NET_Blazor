@@ -1,0 +1,117 @@
+@page "/customer-register"
+@layout EmptyLayout
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthProvider
+
+<div class="container py-5 h-100">
+    <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+            <div class="card shadow border-0" style="border-radius: 1rem;">
+                <div class="card-body p-5">
+                    <h3 class="text-center mb-4 text-primary fw-bold">Đăng Ký Tài Khoản</h3>
+
+                    <EditForm Model="regModel" OnValidSubmit="HandleRegistration">
+                        <DataAnnotationsValidator />
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Họ và tên</label>
+                            <InputText class="form-control" @bind-Value="regModel.FullName" />
+                            <ValidationMessage For="@(() => regModel.FullName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText type="email" class="form-control" @bind-Value="regModel.Email" />
+                            <ValidationMessage For="@(() => regModel.Email)" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Số điện thoại</label>
+                            <InputText class="form-control" @bind-Value="regModel.PhoneNumber" />
+                            <ValidationMessage For="@(() => regModel.PhoneNumber)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Địa chỉ</label>
+                            <InputText class="form-control" @bind-Value="regModel.Address" />
+                            <ValidationMessage For="@(() => regModel.Address)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu</label>
+                            <InputText type="password" class="form-control" @bind-Value="regModel.Password" />
+                            <ValidationMessage For="@(() => regModel.Password)" />
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">Đăng Ký</button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <small>Đã có tài khoản? <a href="login" class="fw-bold text-decoration-none">Đăng nhập</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // ... Giữ nguyên phần Code C# cũ của bạn ở đây ...
+    // Copy lại phần @code từ file CustomerRegister.razor cũ của bạn
+    // Vì logic đăng ký của bạn đã ổn.
+    
+    private class RegistrationModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string FullName { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = "";
+        
+        [System.ComponentModel.DataAnnotations.Required]
+        public string PhoneNumber { get; set; } = "";
+        
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Address { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(6, ErrorMessage = "Mật khẩu phải từ 6 ký tự.")]
+        public string Password { get; set; } = "";
+    }
+
+    private RegistrationModel regModel = new();
+    private string? errorMessage;
+
+    private async Task HandleRegistration()
+    {
+        errorMessage = null;
+        var customerToRegister = new Customer
+        {
+            FullName = regModel.FullName,
+            Email = regModel.Email,
+            PhoneNumber = regModel.PhoneNumber,
+            Address = regModel.Address
+        };
+        // Lưu ý: Sửa lại hàm này cho đúng với ApiService của bạn nếu cần
+        var response = await ApiService.CustomerRegisterAsync(customerToRegister, regModel.Password);
+
+        if (response.Success && !string.IsNullOrEmpty(response.Token))
+        {
+            var customAuthProvider = (StoreManagement.Client.Services.CustomAuthenticationStateProvider)AuthProvider;
+            await customAuthProvider.MarkUserAsAuthenticated(response.Token);
+            NavigationManager.NavigateTo("/"); // Đăng ký xong về trang chủ
+        }
+        else
+        {
+            errorMessage = response.Message ?? "Đăng ký thất bại.";
+        }
+    }
+}

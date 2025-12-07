@@ -1,49 +1,63 @@
 @page "/login"
 @layout EmptyLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
 @inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
-@inject Services.ApiService ApiService
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject AuthenticationStateProvider AuthProvider
 
-<div class="d-flex justify-content-center align-items-center vh-100">
-    <div class="card shadow-lg" style="width: 25rem;">
-        <div class="card-header text-center">
-            <h3>Đăng nhập</h3>
-        </div>
-        <div class="card-body p-4">
-            <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
-                <DataAnnotationsValidator />
-                <div class="mb-3">
-                    <label for="username" class="form-label">Tên đăng nhập</label>
-                    <InputText id="username" class="form-control" @bind-Value="loginModel.Username" />
-                    <ValidationMessage For="@(() => loginModel.Username)" />
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Mật khẩu</label>
-                    <InputText type="password" id="password" class="form-control" @bind-Value="loginModel.Password" />
-                    <ValidationMessage For="@(() => loginModel.Password)" />
-                </div>
+<div class="container py-5 h-100">
+    <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+            <div class="card shadow-lg border-0" style="border-radius: 1rem;">
+                <div class="card-body p-5 text-center">
 
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger" role="alert">
-                        @errorMessage
-                    </div>
-                }
+                    <h2 class="fw-bold mb-2 text-uppercase text-primary">Đăng Nhập</h2>
+                    <p class="text-muted mb-5">Nhập tên đăng nhập và mật khẩu của bạn!</p>
 
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                        @if (isSubmitting)
+                    @* Thay OnValidSubmit bằng OnSubmit để bỏ qua kiểm tra hợp lệ *@
+                    <EditForm Model="@loginModel" OnSubmit="HandleLogin">
+                        @* Đã comment dòng kiểm tra lỗi *@
+                        @* <DataAnnotationsValidator /> *@
+
+                        <div class="form-floating mb-4">
+                            <InputText id="username" class="form-control" @bind-Value="loginModel.Username" placeholder="Username" />
+                            <label for="username">Tên đăng nhập</label>
+                            
+                            @* Đã comment thông báo lỗi *@
+                            @* <ValidationMessage For="@(() => loginModel.Username)" /> *@
+                        </div>
+
+                        <div class="form-floating mb-4">
+                            <InputText type="password" id="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Password" />
+                            <label for="password">Mật khẩu</label>
+                            
+                            @* Đã comment thông báo lỗi *@
+                            @* <ValidationMessage For="@(() => loginModel.Password)" /> *@
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            <span> Đang xử lý...</span>
+                            <div class="alert alert-danger mb-4">@errorMessage</div>
                         }
-                        else
-                        {
-                            <span>Đăng nhập</span>
-                        }
-                    </button>
+
+                        <button class="btn btn-primary btn-lg w-100 mb-4" type="submit" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span><span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <span>Đăng nhập</span>
+                            }
+                        </button>
+
+                        <hr class="my-4">
+                        <p class="mb-0">Chưa có tài khoản? <a href="customer-register" class="text-primary fw-bold">Đăng ký ngay</a></p>
+                    </EditForm>
+
                 </div>
-            </EditForm>
+            </div>
         </div>
     </div>
 </div>
@@ -55,11 +69,12 @@
 
     public class LoginRequest
     {
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Tên đăng nhập là bắt buộc.")]
-        public string Username { get; set; } = string.Empty;
+        // Đã comment các dòng [Required] để tắt validate
+        // [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
+        public string Username { get; set; } = "";
 
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Mật khẩu là bắt buộc.")]
-        public string Password { get; set; } = string.Empty;
+        // [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+        public string Password { get; set; } = "";
     }
 
     private async Task HandleLogin()
@@ -67,60 +82,44 @@
         isSubmitting = true;
         errorMessage = null;
 
-        // --- MOCK LOGIN LOGIC ---
-        await Task.Delay(500); // Simulate network latency
-
-        if (loginModel.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
-        {
-            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "UserRole", "Admin");
-            NavigationManager.NavigateTo("/employees", forceLoad: true);
-        }
-        else if (loginModel.Username.Equals("staff", StringComparison.OrdinalIgnoreCase))
-        {
-            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "UserRole", "Staff");
-            NavigationManager.NavigateTo("/timekeeping", forceLoad: true);
-        }
-        else
-        {
-            errorMessage = "Tên đăng nhập hoặc mật khẩu không chính xác.";
-        }
-        
-        isSubmitting = false;
-
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
         try
         {
             var result = await ApiService.LoginAsync(loginModel.Username, loginModel.Password);
-            if (result.Success && result.Data != null)
-            {
-                // Example: Store token, user info, etc.
-                // await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", result.Token);
-                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "UserRole", result.Data.RoleName);
 
-                if (result.Data.RoleName == "Admin")
+            if (result.Success && !string.IsNullOrEmpty(result.Token))
+            {
+                var customAuthProvider = (StoreManagement.Client.Services.CustomAuthenticationStateProvider)AuthProvider;
+                await customAuthProvider.MarkUserAsAuthenticated(result.Token);
+
+                // --- PHÂN QUYỀN ĐIỀU HƯỚNG ---
+                var role = result.Data?.RoleName; 
+
+                if (role == "Admin" || role == "Manager")
                 {
-                    NavigationManager.NavigateTo("/employees", forceLoad: true);
+                    NavigationManager.NavigateTo("/inventory"); 
+                }
+                else if (role == "Staff")
+                {
+                    NavigationManager.NavigateTo("/timekeeping");
                 }
                 else
                 {
-                    NavigationManager.NavigateTo("/timekeeping", forceLoad: true);
+                    // Khách hàng về trang chủ
+                    NavigationManager.NavigateTo("/");
                 }
             }
             else
             {
-                errorMessage = result.Message ?? "Đăng nhập thất bại.";
+                errorMessage = result.Message ?? "Tên đăng nhập hoặc mật khẩu không đúng.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "Đã xảy ra lỗi kết nối. Vui lòng thử lại sau.";
-            Console.WriteLine($"Login exception: {ex.Message}");
+            errorMessage = $"Lỗi hệ thống: {ex.Message}";
         }
         finally
         {
             isSubmitting = false;
         }
-        */
     }
 }

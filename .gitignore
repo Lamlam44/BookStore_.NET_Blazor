@@ -55,4 +55,4 @@ appsettings.Local.json
 *.key
 
 ## --- 9. OTHERS (Các file khác không cần thiết) ---
-project_store_management_backend
+project_store_management

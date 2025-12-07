@@ -127,7 +127,14 @@ namespace StoreManagement.Client.Services
             }
         }
 
-        public Task<Book?> GetBookByIdAsync(string id) => Task.FromResult<Book?>(null);
+        public Task<Book?> GetBookByIdAsync(string id) 
+        {
+            try 
+            {
+                return _http.GetFromJsonAsync<Book>($"api/products/{id}");
+            }
+            catch { return Task.FromResult<Book?>(null); }
+        }
 
         public async Task<List<Book>> SearchBooksAsync(string keyword)
         {
@@ -174,9 +181,62 @@ namespace StoreManagement.Client.Services
         public async Task<List<Category>> GetAllCategoriesAsync()
         {
             try {
-                var response = await _http.GetFromJsonAsync<ApiResponse<List<Category>>>("api/categories");
-                return response?.Data ?? new List<Category>();
+                var url = "api/categories?PageNumber=1&PageSize=1000";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Category>>>(url);
+                return response?.Data?.Items ?? new List<Category>();
             } catch { return new List<Category>(); }
+        }
+
+        // ==========================================
+        // 5B. AUTHORS & PUBLISHERS (DROPDOWN DATA)
+        // ==========================================
+        public async Task<List<Author>> GetAllAuthorsAsync()
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Author>>>("api/authors?PageNumber=1&PageSize=1000");
+                return response?.Data?.Items ?? new List<Author>();
+            }
+            catch { return new List<Author>(); }
+        }
+
+        public async Task<List<Publisher>> GetAllPublishersAsync()
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Publisher>>>("api/publishers?PageNumber=1&PageSize=1000");
+                return response?.Data?.Items ?? new List<Publisher>();
+            }
+            catch { return new List<Publisher>(); }
+        }
+
+        // ==========================================
+        // 6. CUSTOMERS (KHÁCH HÀNG)
+        // ==========================================
+        public async Task<List<Customer>> GetCustomersAsync()
+        {
+            try
+            {
+                var url = "api/customers?PageNumber=1&PageSize=1000";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Customer>>>(url);
+                return response?.Data?.Items ?? new List<Customer>();
+            }
+            catch { return new List<Customer>(); }
+        }
+
+        public async Task CreateCustomerAsync(Customer customer)
+        {
+            try
+            {
+                var dto = new { customer.FullName, customer.Email, customer.PhoneNumber, customer.Address };
+                var response = await _http.PostAsJsonAsync("api/customers", dto);
+                if (!response.IsSuccessStatusCode) 
+                    throw new Exception(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to create customer: {ex.Message}");
+            }
         }
     }
 }

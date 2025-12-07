@@ -1,8 +1,8 @@
 @page "/timekeeping"
+@attribute [Authorize(Roles="Staff")]
 @using System.Timers
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services
-@inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject ApiService ApiService
 @implements IDisposable
@@ -73,35 +73,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var userRole = await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", "UserRole");
-        if (userRole != "Staff")
-        {
-            NavigationManager.NavigateTo("/login");
-            return;
-        }
-
         timer = new System.Timers.Timer(1000);
         timer.Elapsed += OnTimerElapsed;
         timer.Start();
         
-        // --- MOCK DATA LOADING ---
-        LoadMockShiftHistory();
-
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
-        try
-        {
-            var response = await ApiService.GetShiftHistoryAsync();
-            if(response.Success)
-            {
-                shiftHistory = response.Data;
-            }
-        }
-        catch(Exception ex)
-        {
-            Console.WriteLine($"Error fetching shift history: {ex.Message}");
-        }
-        */
+        await LoadShiftHistory();
     }
 
     private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
@@ -116,18 +92,6 @@
 
     private async Task StartShift()
     {
-        // --- MOCK LOGIC ---
-        isShiftStarted = true;
-        shiftStartTime = DateTime.Now;
-        shiftHistory.Insert(0, new ShiftHistoryEntry
-        {
-            Date = currentDate.Date,
-            StartTime = shiftStartTime,
-            Status = "Đang làm việc"
-        });
-
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
         try
         {
             var response = await ApiService.StartShiftAsync();
@@ -135,52 +99,50 @@
             {
                 isShiftStarted = true;
                 shiftStartTime = DateTime.Now;
-                // Optionally refresh history
+                await LoadShiftHistory(); // Refresh history
             }
         }
         catch(Exception ex)
         {
             Console.WriteLine($"Error starting shift: {ex.Message}");
         }
-        */
     }
 
     private async Task EndShift()
     {
-        // --- MOCK LOGIC ---
-        isShiftStarted = false;
-        var currentShift = shiftHistory.FirstOrDefault(s => s.Status == "Đang làm việc");
-        if (currentShift != null)
-        {
-            currentShift.EndTime = DateTime.Now;
-            currentShift.Status = "Đã hoàn thành";
-        }
-        
-        /*
-        // --- TEMPLATE FOR REAL API CALL ---
         try
         {
             var response = await ApiService.EndShiftAsync();
             if(response.Success)
             {
                 isShiftStarted = false;
-                // Optionally refresh history
+                await LoadShiftHistory(); // Refresh history
             }
         }
         catch(Exception ex)
         {
             Console.WriteLine($"Error ending shift: {ex.Message}");
         }
-        */
     }
 
-    private void LoadMockShiftHistory()
+    private async Task LoadShiftHistory()
     {
-        shiftHistory = new List<ShiftHistoryEntry>
+        try
         {
-            new ShiftHistoryEntry { Date = DateTime.Now.AddDays(-1).Date, StartTime = new DateTime(2025, 10, 19, 8, 2, 0), EndTime = new DateTime(2025, 10, 19, 17, 5, 0), Status = "Đã hoàn thành" },
-            new ShiftHistoryEntry { Date = DateTime.Now.AddDays(-2).Date, StartTime = new DateTime(2025, 10, 18, 7, 59, 0), EndTime = new DateTime(2025, 10, 18, 17, 3, 0), Status = "Đã hoàn thành" },
-        };
+            var response = await ApiService.GetShiftHistoryAsync();
+            if(response.Success)
+            {
+                shiftHistory = response.Data ?? new();
+                isShiftStarted = shiftHistory.Any(s => s.Status == "Đang làm việc");
+                if (isShiftStarted) {
+                    shiftStartTime = shiftHistory.First(s => s.Status == "Đang làm việc").StartTime;
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error fetching shift history: {ex.Message}");
+        }
     }
 
     public void Dispose()

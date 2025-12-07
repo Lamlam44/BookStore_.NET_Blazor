@@ -1,0 +1,103 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject StoreManagement.Client.Services.CartService CartService
+@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="customer-layout">
+    @* --- HEADER --- *@
+    <header class="bg-white shadow-sm sticky-top">
+        <div class="container py-2">
+            <div class="row align-items-center">
+                @* LOGO *@
+                <div class="col-md-3">
+                    <a href="/" class="text-decoration-none">
+                        <h2 class="m-0 fw-bold text-danger" style="font-family: Arial; letter-spacing: -1px;">BOOKSTORE</h2>
+                    </a>
+                </div>
+
+                @* SEARCH BAR *@
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <input type="text" class="form-control border-end-0 rounded-pill rounded-end" placeholder="Tìm kiếm sách..." />
+                        <button class="btn btn-danger border-start-0 rounded-pill rounded-start px-4">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @* ICON MENU *@
+                <div class="col-md-4 d-flex justify-content-end align-items-center gap-4">
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="dropdown">
+                                <a href="#" class="text-decoration-none text-secondary d-flex align-items-center gap-2" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle fs-4"></i>
+                                    <div>
+                                        <small>Chào, @context.User.Identity?.Name</small>
+                                    </div>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="order-history">Lịch sử đơn hàng</a></li>
+                                    <li><a class="dropdown-item" href="profile">Hồ sơ cá nhân</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="logout">Đăng xuất</a></li>
+                                </ul>
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <a href="login" class="text-decoration-none text-secondary text-center">
+                                <i class="bi bi-person fs-4"></i>
+                                <div style="font-size: 11px;">Đăng nhập</div>
+                            </a>
+                        </NotAuthorized>
+                    </AuthorizeView>
+
+                    <a href="cart" class="text-decoration-none text-secondary text-center position-relative">
+                        <i class="bi bi-cart3 fs-4"></i>
+                        <div style="font-size: 11px;">Giỏ hàng</div>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            @CartService.GetCartItems().Count
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        @* MENU NGANG *@
+        <div class="border-top mt-2" style="background-color: #f8f9fa;">
+            <div class="container">
+                <ul class="nav">
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/">TRANG CHỦ</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="products">SÁCH MỚI</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">VĂN PHÒNG PHẨM</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    @* --- BODY --- *@
+    <main class="py-4" style="background-color: #f0f0f0; min-height: 80vh;">
+        <div class="container">
+            @Body
+        </div>
+    </main>
+
+    @* --- FOOTER --- *@
+    <footer class="bg-white pt-5 pb-3 border-top">
+        <div class="container text-center">
+            <p class="text-muted">&copy; 2024 BookStore System</p>
+        </div>
+    </footer>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Đăng ký sự kiện để cập nhật số lượng giỏ hàng
+        CartService.OnChange += StateHasChanged;
+    }
+    public void Dispose()
+    {
+        CartService.OnChange -= StateHasChanged;
+    }
+}
