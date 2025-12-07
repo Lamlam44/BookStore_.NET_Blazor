@@ -13,31 +13,19 @@ namespace StoreManagement.Client.Services
         }
 
         // ==========================================
-        // KHU VỰC XỬ LÝ SUPPLIER (NHÀ CUNG CẤP)
+        // 1. NHÀ CUNG CẤP (SUPPLIER)
         // ==========================================
-
-        // 1. Lấy danh sách
         public async Task<List<Supplier>> GetSuppliersAsync()
         {
             try
             {
-                // Backend yêu cầu phân trang, ta truyền tham số để lấy tất cả (hoặc trang 1)
                 var url = "api/suppliers?PageNumber=1&PageSize=100";
-                
-                // Hứng cục JSON to đùng từ Backend
                 var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Supplier>>>(url);
-
-                // Chỉ lấy cái list Items bên trong ra để trả về cho giao diện
                 return response?.Data?.Items ?? new List<Supplier>();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Lỗi lấy danh sách Supplier: {ex.Message}");
-                return new List<Supplier>();
-            }
+            catch { return new List<Supplier>(); }
         }
 
-        // 2. Lấy chi tiết
         public async Task<Supplier?> GetSupplierByIdAsync(string id)
         {
             try
@@ -45,19 +33,11 @@ namespace StoreManagement.Client.Services
                 var response = await _http.GetFromJsonAsync<ApiResponse<Supplier>>($"api/suppliers/{id}");
                 return response?.Data;
             }
-            catch (HttpRequestException)
-            {
-                return null;
-            }
+            catch { return null; }
         }
 
-        // 3. Lấy chi tiết kèm lịch sử
-        public async Task<Supplier?> GetSupplierWithHistoryAsync(string id)
-        {
-            return await GetSupplierByIdAsync(id);
-        }
+        public async Task<Supplier?> GetSupplierWithHistoryAsync(string id) => await GetSupplierByIdAsync(id);
 
-        // 4. Tìm kiếm
         public async Task<List<Supplier>> SearchSuppliersAsync(string keyword)
         {
             try
@@ -66,70 +46,37 @@ namespace StoreManagement.Client.Services
                 var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Supplier>>>(url);
                 return response?.Data?.Items ?? new List<Supplier>();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Lỗi tìm kiếm: " + ex.Message);
-                return new List<Supplier>();
-            }
+            catch { return new List<Supplier>(); }
         }
 
-        // 5. Tạo mới
         public async Task CreateSupplierAsync(Supplier supplier)
         {
-            var requestDto = new
-            {
-                SupplierName = supplier.SupplierName,
-                ContactPerson = supplier.ContactPerson,
-                Phone = supplier.Phone,
-                Address = supplier.Address
-            };
-
-            var response = await _http.PostAsJsonAsync("api/suppliers", requestDto);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Lỗi tạo mới: {error}");
-            }
+            var dto = new { supplier.SupplierName, supplier.ContactPerson, supplier.Phone, supplier.Address };
+            var response = await _http.PostAsJsonAsync("api/suppliers", dto);
+            if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
         }
 
-        // 6. Cập nhật
         public async Task UpdateSupplierAsync(Supplier supplier)
         {
-            var requestDto = new
-            {
-                SupplierName = supplier.SupplierName,
-                ContactPerson = supplier.ContactPerson,
-                Phone = supplier.Phone,
-                Address = supplier.Address
-            };
-
-            var response = await _http.PutAsJsonAsync($"api/suppliers/{supplier.Id}", requestDto);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Lỗi cập nhật: {error}");
-            }
+            var dto = new { supplier.SupplierName, supplier.ContactPerson, supplier.Phone, supplier.Address };
+            var response = await _http.PutAsJsonAsync($"api/suppliers/{supplier.Id}", dto);
+            if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
         }
-        // ==========================================
-        // KHU VỰC XỬ LÝ VOUCHER (KHUYẾN MÃI)
-        // ==========================================
 
+        public async Task DeleteSupplierAsync(string id) => await _http.DeleteAsync($"api/suppliers/{id}");
+
+        // ==========================================
+        // 2. KHUYẾN MÃI (VOUCHER)
+        // ==========================================
         public async Task<List<Voucher>> GetVouchersAsync()
         {
             try
             {
-                // Giả sử lấy 100 dòng đầu tiên
                 var url = "api/vouchers?PageNumber=1&PageSize=100";
                 var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Voucher>>>(url);
                 return response?.Data?.Items ?? new List<Voucher>();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Lỗi lấy Voucher: {ex.Message}");
-                return new List<Voucher>();
-            }
+            catch { return new List<Voucher>(); }
         }
 
         public async Task<Voucher?> GetVoucherByIdAsync(string id)
@@ -139,67 +86,97 @@ namespace StoreManagement.Client.Services
                 var response = await _http.GetFromJsonAsync<ApiResponse<Voucher>>($"api/vouchers/{id}");
                 return response?.Data;
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; }
         }
 
-        public async Task CreateVoucherAsync(Voucher voucher)
+        public async Task CreateVoucherAsync(Voucher v)
         {
-            // SỬA LẠI ĐOẠN NÀY ĐỂ KHỚP DTO BACKEND
-            var requestDto = new
-            {
-                Name = voucher.VoucherName,
-                Code = voucher.VoucherCode,
-                DiscountValue = voucher.DiscountValue,
-                StartDate = voucher.StartDate,
-                EndDate = voucher.EndDate,
-                IsActive = voucher.IsActive,
-                Type = "PRODUCT_TARGET",
-                TargetIds = new List<string>()
-            };
-
-            var response = await _http.PostAsJsonAsync("api/vouchers", requestDto);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Lỗi tạo Voucher: {error}");
-            }
+            var dto = new { Name = v.VoucherName, Code = v.VoucherCode, DiscountValue = v.DiscountValue, StartDate = v.StartDate, EndDate = v.EndDate, IsActive = v.IsActive, Type = "PRODUCT_TARGET", TargetIds = new List<string>() };
+            await _http.PostAsJsonAsync("api/vouchers", dto);
         }
 
-        public async Task UpdateVoucherAsync(Voucher voucher)
+        public async Task UpdateVoucherAsync(Voucher v)
         {
-            var requestDto = new
-            {
-                Name = voucher.VoucherName,
-                Code = voucher.VoucherCode,
-                DiscountValue = voucher.DiscountValue,
-                StartDate = voucher.StartDate,
-                EndDate = voucher.EndDate,
-                IsActive = voucher.IsActive,
-                Type = "PRODUCT_TARGET",
-                TargetIds = new List<string>()
-            };
-
-            var response = await _http.PutAsJsonAsync($"api/vouchers/{voucher.Id}", requestDto);
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Lỗi cập nhật: {error}");
-            }
+            var dto = new { Name = v.VoucherName, Code = v.VoucherCode, DiscountValue = v.DiscountValue, StartDate = v.StartDate, EndDate = v.EndDate, IsActive = v.IsActive, Type = "PRODUCT_TARGET", TargetIds = new List<string>() };
+            await _http.PutAsJsonAsync($"api/vouchers/{v.Id}", dto);
         }
 
-        public async Task DeleteVoucherAsync(string id)
-        {
-            await _http.DeleteAsync($"api/vouchers/{id}");
-        }
+        public async Task DeleteVoucherAsync(string id) => await _http.DeleteAsync($"api/vouchers/{id}");
+
         // ==========================================
-        // CÁC HÀM KHÁC (GIỮ NGUYÊN HOẶC IMPLEMENT SAU)
+        // 3. SÁCH & TỒN KHO (INVENTORY & PRODUCT)
         // ==========================================
-        public Task<List<Book>> GetBooksAsync() => Task.FromResult(new List<Book>());
+        
+        public async Task<List<Book>> GetBooksAsync()
+        {
+            try
+            {
+                // Gọi API lấy danh sách sản phẩm
+                var url = "api/products?PageNumber=1&PageSize=1000"; 
+                
+                // QUAN TRỌNG: Dùng PaginationResponse để hứng dữ liệu
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>(url);
+                
+                // Trả về danh sách Items bên trong
+                return response?.Data?.Items ?? new List<Book>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi lấy sách: {ex.Message}");
+                return new List<Book>();
+            }
+        }
+
         public Task<Book?> GetBookByIdAsync(string id) => Task.FromResult<Book?>(null);
-        public Task<bool> CreateReceiptAsync(InventoryReceipt receipt) => Task.FromResult(true);
+
+        public async Task<List<Book>> SearchBooksAsync(string keyword)
+        {
+            try 
+            {
+                var url = $"api/products/search?Query={keyword}&PageNumber=1&PageSize=10";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>(url);
+                return response?.Data?.Items ?? new List<Book>();
+            }
+            catch { return new List<Book>(); }
+        }
+
+        // ==========================================
+        // 4. NHẬP KHO (INVENTORY RECEIPTS)
+        // ==========================================
+        public async Task<bool> CreateReceiptAsync(InventoryReceipt receipt)
+        {
+            try
+            {
+                var requestDto = new
+                {
+                    SupplierId = receipt.SupplierId,
+                    Details = receipt.ReceiptDetails.Select(d => new 
+                    {
+                        BookId = d.BookId,
+                        QuantityReceived = d.QuantityReceived, // Khớp với Backend DTO
+                        UnitCost = d.UnitCost 
+                    }).ToList()
+                };
+
+                var response = await _http.PostAsJsonAsync("api/inventories", requestDto);
+                if (response.IsSuccessStatusCode) return true;
+
+                Console.WriteLine($"Lỗi nhập kho: {await response.Content.ReadAsStringAsync()}");
+                return false;
+            }
+            catch { return false; }
+        }
+
+        // ==========================================
+        // 5. TẠO SÁCH MỚI & DROPDOWN DATA
+        // ==========================================
+
+        public async Task<List<Category>> GetAllCategoriesAsync()
+        {
+            try {
+                var response = await _http.GetFromJsonAsync<ApiResponse<List<Category>>>("api/categories");
+                return response?.Data ?? new List<Category>();
+            } catch { return new List<Category>(); }
+        }
     }
 }

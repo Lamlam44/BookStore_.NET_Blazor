@@ -19,7 +19,11 @@ namespace StoreManagement.Client.Services
         Task CreateVoucherAsync(Voucher voucher);
         Task UpdateVoucherAsync(Voucher voucher);
         Task DeleteVoucherAsync(string id);
+        Task<List<Category>> GetAllCategoriesAsync();
+        Task<List<Book>> SearchBooksAsync(string keyword);
 
         Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
+
+        
     }
 }

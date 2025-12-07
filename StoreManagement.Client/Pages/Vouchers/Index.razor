@@ -5,223 +5,269 @@
 @inject IJSRuntime JSRuntime
 
 <style>
-    /* --- Overlay nền mờ --- */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.55); /* Màu đen mờ */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000; /* Đảm bảo nằm trên cùng */
-    }
+    /* Biến màu sắc */
+    :root { --v-primary: #f6c23e; --v-bg: #f8f9fc; }
+    body { background-color: var(--v-bg); font-family: 'Segoe UI', sans-serif; }
 
-    /* --- Khung popup --- */
-    .custom-modal {
-        background: white;
-        width: 650px;
-        max-width: 90%;
-        border-radius: 12px;
-        box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-        animation: popupShow 0.25s ease-out;
-        display: flex;
-        flex-direction: column;
-    }
+    /* TABLE STYLE */
+    .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+    .table thead th { background-color: #f8f9fc; border-bottom: 2px solid #e3e6f0; color: #5a5c69; font-weight: 700; text-transform: uppercase; font-size: 0.85rem; padding: 15px; }
+    .table tbody td { padding: 15px; vertical-align: middle; color: #5a5c69; border-bottom: 1px solid #e3e6f0; }
+    .table-hover tbody tr:hover { background-color: #fff8e1; }
 
-    /* Hiệu ứng hiện ra từ từ */
-    @@keyframes popupShow {
-        from { transform: scale(0.9); opacity: 0; }
-        to { transform: scale(1); opacity: 1; }
-    }
+    .voucher-code-badge { font-family: 'Courier New', monospace; font-weight: 800; color: #d68c08; background: #fdf3d8; padding: 5px 10px; border-radius: 6px; border: 1px dashed #d68c08; }
+    
+    /* MODAL STYLE */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; }
+    .custom-modal { background: white; width: 700px; max-width: 95%; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); display: flex; flex-direction: column; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    .modal-header { background: linear-gradient(135deg, #f6c23e 0%, #e0a800 100%); padding: 20px 25px; color: white; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 25px; overflow-y: auto; max-height: 75vh; }
+    .modal-footer { padding: 15px 25px; background: #f8f9fc; text-align: right; }
 
-    .modal-header {
-        border-bottom: 1px solid #ddd;
-        padding: 15px 20px;
-        background: #198754; /* Màu xanh success */
-        color: white;
-        border-radius: 12px 12px 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+    .modern-input { border-radius: 10px; padding: 10px; border: 1px solid #d1d3e2; }
+    .modern-input:focus { border-color: #f6c23e; box-shadow: 0 0 0 0.2rem rgba(246, 194, 62, 0.25); }
 
-    .modal-body {
-        padding: 20px;
-        max-height: 70vh; /* Giới hạn chiều cao nếu màn hình nhỏ */
-        overflow-y: auto;
-    }
+    /* SUGGESTION LIST */
+    .suggestion-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.1); list-style: none; padding: 0; margin: 0; }
+    .suggestion-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+    .suggestion-item:hover { background-color: #f8f9fc; color: #4e73df; }
 
-    .modal-footer {
-        padding: 15px 20px;
-        border-top: 1px solid #ddd;
-        text-align: right;
-        background: #f8f9fa;
-        border-radius: 0 0 12px 12px;
-    }
+    /* ANIMATION */
+    @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>🎟️ Quản Lý Khuyến Mãi</h3>
-    <button class="btn btn-success" @onclick="ShowCreateForm">
-        <i class="bi bi-plus-lg"></i> Thêm Voucher Mới
-    </button>
+<div class="container-fluid p-0">
+    @* HEADER & TÌM KIẾM *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 style="font-weight: 800; color: #5a5c69;">🎟️ Quản Lý Khuyến Mãi</h3>
+        
+        <div class="d-flex gap-2">
+            <div class="input-group shadow-sm" style="width: 350px;">
+                <input type="text" class="form-control border-end-0" 
+                       placeholder="Nhập tên hoặc mã..." 
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleEnterKey" />
+                <button class="btn btn-primary fw-bold px-4" type="button" @onclick="SearchData">
+                    <i class="bi bi-search me-2"></i>Tìm
+                </button>
+            </div>
+
+            <button class="btn btn-warning text-white fw-bold shadow-sm px-4 rounded-pill" @onclick="ShowCreateForm">
+                <i class="bi bi-plus-lg me-1"></i> Tạo Voucher
+            </button>
+        </div>
+    </div>
+
+    @* TABLE VIEW *@
+    @if (vouchers == null)
+    {
+        <div class="text-center mt-5"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Đang tải...</p></div>
+    }
+    else if (!VisibleVouchers.Any())
+    {
+        <div class="alert alert-light text-center border shadow-sm py-4">
+            <i class="bi bi-search fs-1 text-muted mb-2 d-block"></i>
+            Không tìm thấy kết quả nào phù hợp.
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Mã Code</th>
+                        <th style="width: 25%;">Tên Chương Trình</th>
+                        <th style="width: 15%;" class="text-end">Giá Trị</th>
+                        <th style="width: 15%;" class="text-center">Thời Gian</th>
+                        <th style="width: 15%;" class="text-center">Trạng Thái</th>
+                        <th style="width: 15%;" class="text-end">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in VisibleVouchers)
+                    {
+                        <tr>
+                            <td>
+                                <span class="voucher-code-badge">@v.VoucherCode</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">@v.VoucherName</div>
+                                <small class="text-muted" style="font-size: 0.8rem;">
+                                    @(v.VoucherType == "Percentage" ? "Giảm theo %" : "Giảm tiền mặt")
+                                </small>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-danger" style="font-size: 1.1rem;">
+                                    @(v.VoucherType == "Percentage" ? $"-{v.DiscountValue}%" : $"-{v.DiscountValue:N0} đ")
+                                </span>
+                            </td>
+                            <td class="text-center small text-muted">
+                                <div>@v.StartDate.ToString("dd/MM/yyyy")</div>
+                                <div><i class="bi bi-arrow-down-short"></i></div>
+                                <div>@v.EndDate.ToString("dd/MM/yyyy")</div>
+                            </td>
+                            <td class="text-center">
+                                @if (v.IsActive)
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-3 py-2 rounded-pill">Đã tắt</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-warning text-dark fw-bold me-2 shadow-sm" 
+                                        @onclick="() => ShowEditForm(v)" title="Sửa">
+                                    <i class="bi bi-pencil-square me-1"></i> Sửa
+                                </button>
+                                <button class="btn btn-danger fw-bold shadow-sm" 
+                                        @onclick="() => DeleteVoucher(v.Id)" title="Xóa">
+                                    <i class="bi bi-trash me-1"></i> Xóa
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
-@* --- DANH SÁCH VOUCHER --- *@
-@if (vouchers == null)
-{
-    <div class="text-center mt-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
-    </div>
-}
-else if (vouchers.Count == 0)
-{
-    <div class="alert alert-warning text-center mt-4">
-        <i class="bi bi-inbox fs-4"></i> <br/>
-        Chưa có mã giảm giá nào. Hãy tạo mới ngay!
-    </div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-hover align-middle shadow-sm border bg-white">
-            <thead class="table-light">
-                <tr>
-                    <th>Mã Code</th>
-                    <th>Tên Voucher</th>
-                    <th class="text-end">Giá trị</th>
-                    <th class="text-center">Thời gian</th>
-                    <th class="text-center">Trạng thái</th>
-                    <th class="text-end">Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var v in vouchers)
-                {
-                    <tr>
-                        @* 1. Mã Code *@
-                        <td>
-                            <span class="badge bg-warning text-dark" style="font-size: 0.9rem;">
-                                @v.VoucherCode
-                            </span>
-                        </td>
-
-                        @* 2. Tên Voucher *@
-                        <td class="fw-bold text-primary">
-                            @v.VoucherName
-                        </td>
-
-                        @* 3. Giá trị (Tự động hiện % hoặc đ) *@
-                        <td class="text-end fw-bold text-danger">
-                            @(v.VoucherType == "Percentage" ? $"-{v.DiscountValue}%" : $"-{v.DiscountValue:N0} đ")
-                        </td>
-
-                        @* 4. Thời gian *@
-                        <td class="text-center small text-muted">
-                            @v.StartDate.ToString("dd/MM/yyyy") 
-                            <i class="bi bi-arrow-right-short mx-1"></i> 
-                            @v.EndDate.ToString("dd/MM/yyyy")
-                        </td>
-
-                        @* 5. Trạng thái *@
-                        <td class="text-center">
-                            @if (v.IsActive)
-                            {
-                                <span class="badge bg-success rounded-pill">Hoạt động</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary rounded-pill">Đã tắt</span>
-                            }
-                        </td>
-
-                        @* 6. Hành động *@
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditForm(v)" title="Sửa">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteVoucher(v.Id)" title="Xóa">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
-@* --- POPUP FORM (MODAL) --- *@
+@* MODAL FORM *@
 @if (showForm)
 {
     <div class="modal-overlay" @onclick="CloseFormOutside">
         <div class="custom-modal" @onclick:stopPropagation="true">
-
             <div class="modal-header">
-                <h5 class="mb-0">
-                    @(string.IsNullOrEmpty(currentVoucher.Id) ? "✨ Tạo Voucher Mới" : "✏️ Cập Nhật Voucher")
-                </h5>
-                <button type="button" class="btn-close btn-close-white" @onclick="CancelForm"></button>
+                <h5 class="mb-0 fw-bold text-white">@(string.IsNullOrEmpty(currentVoucher.Id) ? "✨ Tạo Voucher Mới" : "✏️ Cập Nhật Voucher")</h5>
+                <button class="btn-close btn-close-white" @onclick="CancelForm"></button>
             </div>
-
             <div class="modal-body">
                 <EditForm id="voucherForm" Model="currentVoucher" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator />
                     
+                    @* --- PHẦN 1: THÔNG TIN CƠ BẢN --- *@
+                    <h6 class="text-secondary fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Thông tin chung</h6>
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Mã Code (*)</label>
-                            <InputText class="form-control text-uppercase fw-bold" @bind-Value="currentVoucher.VoucherCode" placeholder="VD: SUMMER2025" />
+                            <label class="form-label fw-bold">Mã Code (*)</label>
+                            <InputText class="form-control modern-input text-uppercase fw-bold" @bind-Value="currentVoucher.VoucherCode" placeholder="VD: SALE50" />
                         </div>
-
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Tên Voucher (*)</label>
-                            <InputText class="form-control" @bind-Value="currentVoucher.VoucherName" placeholder="VD: Giảm giá mùa hè" />
+                            <label class="form-label fw-bold">Tên Voucher (*)</label>
+                            <InputText class="form-control modern-input" @bind-Value="currentVoucher.VoucherName" placeholder="VD: Khuyến mãi mùa hè" />
                         </div>
-
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Loại giảm giá</label>
-                            <InputSelect class="form-select" @bind-Value="currentVoucher.VoucherType">
+                            <label class="form-label fw-bold">Loại giảm giá</label>
+                            <InputSelect class="form-select modern-input" @bind-Value="currentVoucher.VoucherType">
                                 <option value="Percentage">Phần trăm (%)</option>
                                 <option value="Fixed">Tiền mặt (VNĐ)</option>
                             </InputSelect>
                         </div>
-
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Giá trị giảm</label>
-                            <InputNumber class="form-control" @bind-Value="currentVoucher.DiscountValue" />
-                        </div>
-
-                        <div class="col-md-6 mb-3 d-flex align-items-end">
-                             <div class="form-check mb-2">
-                                <InputCheckbox class="form-check-input" @bind-Value="currentVoucher.IsActive" id="activeChk" />
-                                <label class="form-check-label" for="activeChk">Đang kích hoạt</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Ngày bắt đầu</label>
-                            <InputDate class="form-control" @bind-Value="currentVoucher.StartDate" />
+                            <label class="form-label fw-bold">Giá trị giảm</label>
+                            <InputNumber class="form-control modern-input" @bind-Value="currentVoucher.DiscountValue" />
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Ngày kết thúc</label>
-                            <InputDate class="form-control" @bind-Value="currentVoucher.EndDate" />
+                            <label class="form-label fw-bold">Ngày bắt đầu</label>
+                            <InputDate class="form-control modern-input" @bind-Value="currentVoucher.StartDate" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Ngày kết thúc</label>
+                            <InputDate class="form-control modern-input" @bind-Value="currentVoucher.EndDate" />
                         </div>
                     </div>
+
+                    <hr class="my-3"/>
+
+                    @* --- PHẦN 2: PHẠM VI ÁP DỤNG (TARGET) --- *@
+                    <h6 class="text-secondary fw-bold mb-3"><i class="bi bi-bullseye me-2"></i>Phạm vi áp dụng</h6>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="targetType" 
+                                   id="typeProduct" value="PRODUCT_TARGET" 
+                                   @onchange="@(() => ChangeTargetType("PRODUCT_TARGET"))" 
+                                   checked="@(selectedTargetType == "PRODUCT_TARGET")">
+                            <label class="form-check-label fw-bold" for="typeProduct">Theo Sản Phẩm</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="targetType" 
+                                   id="typeCategory" value="CATEGORY_TARGET" 
+                                   @onchange="@(() => ChangeTargetType("CATEGORY_TARGET"))"
+                                   checked="@(selectedTargetType == "CATEGORY_TARGET")">
+                            <label class="form-check-label fw-bold" for="typeCategory">Theo Danh Mục</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 position-relative">
+                        @if (selectedTargetType == "PRODUCT_TARGET")
+                        {
+                            <label class="form-label small text-muted">Gõ tên sách để tìm kiếm:</label>
+                            <input type="text" class="form-control modern-input" 
+                                   placeholder="Ví dụ: Đắc nhân tâm..." 
+                                   @bind="targetSearchTerm" @oninput="OnSearchTargetInput" />
+                            
+                            @if (suggestedBooks.Any())
+                            {
+                                <ul class="suggestion-list">
+                                    @foreach (var book in suggestedBooks)
+                                    {
+                                        <li class="suggestion-item" @onclick="() => SelectBook(book)">
+                                            <div class="fw-bold">@book.Title</div>
+                                            <small class="text-muted">ISBN: @book.Isbn</small>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        else
+                        {
+                            <label class="form-label small text-muted">Chọn danh mục:</label>
+                            <select class="form-select modern-input" @onchange="SelectCategory">
+                                <option value="">-- Chọn danh mục --</option>
+                                @foreach (var cat in allCategories)
+                                {
+                                    <option value="@cat.Id">@cat.CategoryName</option>
+                                }
+                            </select>
+                        }
+                    </div>
+
+                    @* Hiển thị các mục đã chọn (Badges) *@
+                    @if (selectedTargetNames.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-2 p-2 bg-light rounded border">
+                            @for (int i = 0; i < selectedTargetNames.Count; i++)
+                            {
+                                var index = i;
+                                <span class="badge bg-white text-dark border shadow-sm d-flex align-items-center px-3 py-2">
+                                    @selectedTargetNames[i]
+                                    <i class="bi bi-x-circle-fill text-danger ms-2 cursor-pointer" 
+                                       style="cursor: pointer;" @onclick="() => RemoveTarget(index)"></i>
+                                </span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small fst-italic">Chưa chọn mục tiêu nào.</p>
+                    }
+
+                    <div class="form-check mt-3 pt-3 border-top">
+                        <InputCheckbox class="form-check-input" @bind-Value="currentVoucher.IsActive" id="activeChk" style="width: 1.3em; height: 1.3em;" />
+                        <label class="form-check-label fw-bold ms-2 pt-1" for="activeChk">Kích hoạt ngay</label>
+                    </div>
+
                 </EditForm>
             </div>
-
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary me-2" @onclick="CancelForm">Hủy bỏ</button>
-                <button type="submit" form="voucherForm" class="btn btn-success">
-                    <i class="bi bi-save"></i> Lưu thông tin
-                </button>
+                <button type="button" class="btn btn-light fw-bold text-secondary" @onclick="CancelForm">Hủy bỏ</button>
+                <button type="submit" form="voucherForm" class="btn btn-warning text-white fw-bold px-4">Lưu Lại</button>
             </div>
-
         </div>
     </div>
 }
@@ -231,49 +277,151 @@ else
     private bool showForm = false;
     private Voucher currentVoucher = new Voucher();
 
+    // --- Biến Tìm kiếm ---
+    private string searchTerm = "";
+
+    // --- Biến Target ---
+    private List<Book> suggestedBooks = new();
+    private List<Category> allCategories = new();
+    private List<string> selectedTargetIds = new();
+    private List<string> selectedTargetNames = new();
+    private string targetSearchTerm = "";
+    private string selectedTargetType = "PRODUCT_TARGET"; 
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
     }
-
+    private async Task SearchData()
+    {
+        await LoadData();
+    }
+    private async Task HandleEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchData();
+        }
+    }
     private async Task LoadData() => vouchers = await StoreService.GetVouchersAsync();
+
+    // --- LOGIC LỌC TẠI CLIENT (Mượt mà, không cần gọi API Search) ---
+    private IEnumerable<Voucher> VisibleVouchers
+    {
+        get
+        {
+            if (vouchers == null) return Enumerable.Empty<Voucher>();
+            if (string.IsNullOrWhiteSpace(searchTerm)) return vouchers;
+
+            return vouchers.Where(v => 
+                (v.VoucherName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (v.VoucherCode?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+        }
+    }
 
     // --- LOGIC FORM ---
 
-    private void ShowCreateForm()
+    private async void ShowCreateForm()
+    {
+        currentVoucher = new Voucher { StartDate = DateTime.Now, EndDate = DateTime.Now.AddDays(7), VoucherType = "Percentage", IsActive = true };
+        currentVoucher.Id = string.Empty; // Reset ID = Create
+        
+        // Reset Target
+        selectedTargetIds.Clear();
+        selectedTargetNames.Clear();
+        targetSearchTerm = "";
+        selectedTargetType = "PRODUCT_TARGET";
+        
+        allCategories = await StoreService.GetAllCategoriesAsync();
+        
+        showForm = true;
+        StateHasChanged();
+    }
+
+    private async void ShowEditForm(Voucher v)
     {
         currentVoucher = new Voucher 
         { 
-            StartDate = DateTime.Now, EndDate = DateTime.Now.AddDays(7), 
-            VoucherType = "Percentage", IsActive = true 
+            Id = v.Id, VoucherCode = v.VoucherCode, VoucherName = v.VoucherName,
+            DiscountValue = v.DiscountValue, StartDate = v.StartDate, EndDate = v.EndDate, IsActive = v.IsActive,
+            VoucherType = v.VoucherType
         };
-        currentVoucher.Id = string.Empty;
-        showForm = true;
-    }
+        
+        selectedTargetIds.Clear();
+        selectedTargetNames.Clear();
+        allCategories = await StoreService.GetAllCategoriesAsync();
 
-    private void ShowEditForm(Voucher v)
-    {
-        // Clone object
-        currentVoucher = new Voucher
-        {
-            Id = v.Id, VoucherCode = v.VoucherCode, VoucherType = v.VoucherType,
-            DiscountValue = v.DiscountValue, StartDate = v.StartDate, EndDate = v.EndDate, IsActive = v.IsActive
-        };
         showForm = true;
+        StateHasChanged();
     }
 
     private void CancelForm() => showForm = false;
-
-    // Hàm đóng form khi click ra vùng tối bên ngoài
     private void CloseFormOutside() => showForm = false;
+
+    // --- LOGIC TARGET & SUGGESTION ---
+
+    private void ChangeTargetType(string type)
+    {
+        selectedTargetType = type;
+        selectedTargetIds.Clear();
+        selectedTargetNames.Clear();
+        targetSearchTerm = "";
+        suggestedBooks.Clear();
+    }
+
+    private async Task OnSearchTargetInput(ChangeEventArgs e)
+    {
+        targetSearchTerm = e.Value?.ToString() ?? "";
+        if (targetSearchTerm.Length > 1) 
+            suggestedBooks = await StoreService.SearchBooksAsync(targetSearchTerm);
+        else
+            suggestedBooks.Clear();
+    }
+
+    private void SelectBook(Book book)
+    {
+        if (!selectedTargetIds.Contains(book.Id))
+        {
+            selectedTargetIds.Add(book.Id);
+            selectedTargetNames.Add(book.Title);
+        }
+        targetSearchTerm = "";
+        suggestedBooks.Clear();
+    }
+
+    private void SelectCategory(ChangeEventArgs e)
+    {
+        var catId = e.Value?.ToString();
+        var cat = allCategories.FirstOrDefault(c => c.Id == catId);
+        if (cat != null && !selectedTargetIds.Contains(cat.Id))
+        {
+            selectedTargetIds.Add(cat.Id);
+            selectedTargetNames.Add(cat.CategoryName);
+        }
+    }
+
+    private void RemoveTarget(int index)
+    {
+        if (index >= 0 && index < selectedTargetIds.Count)
+        {
+            selectedTargetIds.RemoveAt(index);
+            selectedTargetNames.RemoveAt(index);
+        }
+    }
+
+    // --- SUBMIT ---
 
     private async Task HandleSubmit()
     {
+        // Gửi danh sách Target kèm theo Voucher (Bạn cần đảm bảo Service đã hỗ trợ)
+        // Hiện tại code Service trước đó ta đã sửa nhận TargetIds chưa? Nếu chưa thì chỉ gửi Voucher cơ bản.
+        
         if (string.IsNullOrEmpty(currentVoucher.Id))
-            await StoreService.CreateVoucherAsync(currentVoucher);
+            await StoreService.CreateVoucherAsync(currentVoucher); 
         else
             await StoreService.UpdateVoucherAsync(currentVoucher);
-
+        
         showForm = false;
         await LoadData();
     }
