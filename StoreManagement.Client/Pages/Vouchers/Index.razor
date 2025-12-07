@@ -13,14 +13,13 @@
     .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
     .table thead th { background-color: #f8f9fc; border-bottom: 2px solid #e3e6f0; color: #5a5c69; font-weight: 700; text-transform: uppercase; font-size: 0.85rem; padding: 15px; }
     .table tbody td { padding: 15px; vertical-align: middle; color: #5a5c69; border-bottom: 1px solid #e3e6f0; }
-    .table-hover tbody tr:hover { background-color: #fdf3d8; /* Highlight vàng nhạt khi hover */ }
+    .table-hover tbody tr:hover { background-color: #fff8e1; }
 
     .voucher-code-badge { font-family: 'Courier New', monospace; font-weight: 800; color: #d68c08; background: #fdf3d8; padding: 5px 10px; border-radius: 6px; border: 1px dashed #d68c08; }
     
-    /* MODAL & FORM STYLE (Giữ nguyên) */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s; }
+    /* MODAL STYLE */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; }
     .custom-modal { background: white; width: 700px; max-width: 95%; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); display: flex; flex-direction: column; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-    
     .modal-header { background: linear-gradient(135deg, #f6c23e 0%, #e0a800 100%); padding: 20px 25px; color: white; display: flex; justify-content: space-between; align-items: center; }
     .modal-body { padding: 25px; overflow-y: auto; max-height: 75vh; }
     .modal-footer { padding: 15px 25px; background: #f8f9fc; text-align: right; }
@@ -28,7 +27,7 @@
     .modern-input { border-radius: 10px; padding: 10px; border: 1px solid #d1d3e2; }
     .modern-input:focus { border-color: #f6c23e; box-shadow: 0 0 0 0.2rem rgba(246, 194, 62, 0.25); }
 
-    /* SUGGESTION LIST STYLE */
+    /* SUGGESTION LIST */
     .suggestion-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.1); list-style: none; padding: 0; margin: 0; }
     .suggestion-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
     .suggestion-item:hover { background-color: #f8f9fc; color: #4e73df; }
@@ -39,22 +38,37 @@
 </style>
 
 <div class="container-fluid p-0">
-    @* HEADER *@
+    @* HEADER & TÌM KIẾM *@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 style="font-weight: 800; color: #5a5c69;">🎟️ Quản Lý Khuyến Mãi</h3>
-        <button class="btn btn-warning text-white fw-bold shadow-sm px-4 py-2 rounded-pill" @onclick="ShowCreateForm">
-            <i class="bi bi-plus-lg me-1"></i> Tạo Voucher
-        </button>
+        
+        <div class="d-flex gap-2">
+            <div class="input-group shadow-sm" style="width: 350px;">
+                <input type="text" class="form-control border-end-0" 
+                       placeholder="Nhập tên hoặc mã..." 
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleEnterKey" />
+                <button class="btn btn-primary fw-bold px-4" type="button" @onclick="SearchData">
+                    <i class="bi bi-search me-2"></i>Tìm
+                </button>
+            </div>
+
+            <button class="btn btn-warning text-white fw-bold shadow-sm px-4 rounded-pill" @onclick="ShowCreateForm">
+                <i class="bi bi-plus-lg me-1"></i> Tạo Voucher
+            </button>
+        </div>
     </div>
 
-    @* TABLE VIEW (GIAO DIỆN BẢNG) *@
+    @* TABLE VIEW *@
     @if (vouchers == null)
     {
         <div class="text-center mt-5"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Đang tải...</p></div>
     }
-    else if (vouchers.Count == 0)
+    else if (!VisibleVouchers.Any())
     {
-        <div class="alert alert-warning text-center shadow-sm border-0">Chưa có mã giảm giá nào.</div>
+        <div class="alert alert-light text-center border shadow-sm py-4">
+            <i class="bi bi-search fs-1 text-muted mb-2 d-block"></i>
+            Không tìm thấy kết quả nào phù hợp.
+        </div>
     }
     else
     {
@@ -71,7 +85,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var v in vouchers)
+                    @foreach (var v in VisibleVouchers)
                     {
                         <tr>
                             <td>
@@ -88,9 +102,9 @@
                                     @(v.VoucherType == "Percentage" ? $"-{v.DiscountValue}%" : $"-{v.DiscountValue:N0} đ")
                                 </span>
                             </td>
-                            <td class="text-center small">
+                            <td class="text-center small text-muted">
                                 <div>@v.StartDate.ToString("dd/MM/yyyy")</div>
-                                <div class="text-muted"><i class="bi bi-arrow-down-short"></i></div>
+                                <div><i class="bi bi-arrow-down-short"></i></div>
                                 <div>@v.EndDate.ToString("dd/MM/yyyy")</div>
                             </td>
                             <td class="text-center">
@@ -104,14 +118,12 @@
                                 }
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-primary btn-action me-2 shadow-sm"
-                                        @onclick="() => ShowEditForm(v)"
-                                        title="Sửa">
+                                <button class="btn btn-warning text-dark fw-bold me-2 shadow-sm" 
+                                        @onclick="() => ShowEditForm(v)" title="Sửa">
                                     <i class="bi bi-pencil-square me-1"></i> Sửa
                                 </button>
-                                <button class="btn btn-danger btn-action shadow-sm"
-                                        @onclick="() => DeleteVoucher(v.Id)"
-                                        title="Xóa">
+                                <button class="btn btn-danger fw-bold shadow-sm" 
+                                        @onclick="() => DeleteVoucher(v.Id)" title="Xóa">
                                     <i class="bi bi-trash me-1"></i> Xóa
                                 </button>
                             </td>
@@ -123,7 +135,7 @@
     }
 </div>
 
-@* MODAL FORM (LOGIC TARGET & SUGGESTION VẪN GIỮ NGUYÊN) *@
+@* MODAL FORM *@
 @if (showForm)
 {
     <div class="modal-overlay" @onclick="CloseFormOutside">
@@ -191,7 +203,6 @@
                         </div>
                     </div>
 
-                    @* Logic hiển thị ô tìm kiếm hoặc dropdown *@
                     <div class="mb-3 position-relative">
                         @if (selectedTargetType == "PRODUCT_TARGET")
                         {
@@ -266,12 +277,14 @@
     private bool showForm = false;
     private Voucher currentVoucher = new Voucher();
 
-    // --- BIẾN CHO PHẦN TARGET ---
+    // --- Biến Tìm kiếm ---
+    private string searchTerm = "";
+
+    // --- Biến Target ---
     private List<Book> suggestedBooks = new();
     private List<Category> allCategories = new();
     private List<string> selectedTargetIds = new();
     private List<string> selectedTargetNames = new();
-    
     private string targetSearchTerm = "";
     private string selectedTargetType = "PRODUCT_TARGET"; 
 
@@ -279,15 +292,40 @@
     {
         await LoadData();
     }
-
+    private async Task SearchData()
+    {
+        await LoadData();
+    }
+    private async Task HandleEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchData();
+        }
+    }
     private async Task LoadData() => vouchers = await StoreService.GetVouchersAsync();
+
+    // --- LOGIC LỌC TẠI CLIENT (Mượt mà, không cần gọi API Search) ---
+    private IEnumerable<Voucher> VisibleVouchers
+    {
+        get
+        {
+            if (vouchers == null) return Enumerable.Empty<Voucher>();
+            if (string.IsNullOrWhiteSpace(searchTerm)) return vouchers;
+
+            return vouchers.Where(v => 
+                (v.VoucherName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (v.VoucherCode?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+        }
+    }
 
     // --- LOGIC FORM ---
 
     private async void ShowCreateForm()
     {
         currentVoucher = new Voucher { StartDate = DateTime.Now, EndDate = DateTime.Now.AddDays(7), VoucherType = "Percentage", IsActive = true };
-        currentVoucher.Id = string.Empty; 
+        currentVoucher.Id = string.Empty; // Reset ID = Create
         
         // Reset Target
         selectedTargetIds.Clear();
@@ -295,7 +333,6 @@
         targetSearchTerm = "";
         selectedTargetType = "PRODUCT_TARGET";
         
-        // Load danh mục sẵn
         allCategories = await StoreService.GetAllCategoriesAsync();
         
         showForm = true;
@@ -311,7 +348,6 @@
             VoucherType = v.VoucherType
         };
         
-        // TODO: Logic load lại Target cũ từ API Detail nếu cần (hiện tại reset để nhập mới)
         selectedTargetIds.Clear();
         selectedTargetNames.Clear();
         allCategories = await StoreService.GetAllCategoriesAsync();
@@ -323,7 +359,7 @@
     private void CancelForm() => showForm = false;
     private void CloseFormOutside() => showForm = false;
 
-    // --- LOGIC TARGET ---
+    // --- LOGIC TARGET & SUGGESTION ---
 
     private void ChangeTargetType(string type)
     {
@@ -338,13 +374,9 @@
     {
         targetSearchTerm = e.Value?.ToString() ?? "";
         if (targetSearchTerm.Length > 1) 
-        {
             suggestedBooks = await StoreService.SearchBooksAsync(targetSearchTerm);
-        }
         else
-        {
             suggestedBooks.Clear();
-        }
     }
 
     private void SelectBook(Book book)
@@ -382,8 +414,8 @@
 
     private async Task HandleSubmit()
     {
-        // Hiện tại hàm CreateVoucherAsync trong ApiStoreService có thể chưa hỗ trợ nhận list TargetIds
-        // Bạn cần đảm bảo đã cập nhật hàm đó để nhận thêm tham số này nếu muốn lưu Target
+        // Gửi danh sách Target kèm theo Voucher (Bạn cần đảm bảo Service đã hỗ trợ)
+        // Hiện tại code Service trước đó ta đã sửa nhận TargetIds chưa? Nếu chưa thì chỉ gửi Voucher cơ bản.
         
         if (string.IsNullOrEmpty(currentVoucher.Id))
             await StoreService.CreateVoucherAsync(currentVoucher); 
@@ -396,7 +428,7 @@
 
     private async Task DeleteVoucher(string id)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Xóa voucher này?"))
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn xóa Voucher này không?"))
         {
             await StoreService.DeleteVoucherAsync(id);
             await LoadData();

@@ -5,137 +5,60 @@
 @inject IJSRuntime JSRuntime
 
 <style>
-    /* Nền trang */
+    /* CSS cũ giữ nguyên */
     body { background-color: #f8f9fc; font-family: 'Segoe UI', sans-serif; }
-
-    /* Header */
-    h3 { font-weight: 700; color: #0d6efd; }
-
-    /* TABLE STYLE */
-    .table-container {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        overflow: hidden; /* Để bo góc table */
-    }
-    .table thead th {
-        background-color: #0d6efd; /* Xanh dương đậm */
-        color: white;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        padding: 15px;
-        border: none;
-    }
-    .table tbody td {
-        padding: 15px;
-        vertical-align: middle;
-        color: #5a5c69;
-        border-bottom: 1px solid #e3e6f0;
-    }
-    .table-hover tbody tr:hover {
-        background-color: #f1f7ff; /* Highlight xanh nhạt khi hover */
-    }
-
-    /* Input Group */
-    .input-group input { border-radius: 8px 0 0 8px; }
-    .input-group button { border-radius: 0 8px 8px 0; }
-
-    /* MODAL STYLE (GIỮ NGUYÊN) */
+    .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+    .table thead th { background-color: #0d6efd; color: white; padding: 15px; border: none; }
+    .table tbody td { padding: 15px; vertical-align: middle; border-bottom: 1px solid #e3e6f0; }
+    .table-hover tbody tr:hover { background-color: #f1f7ff; }
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; }
-    .custom-modal { background: white; width: 700px; max-width: 90%; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; animation: popupShow 0.3s ease-out; }
+    .custom-modal { background: white; width: 700px; max-width: 95%; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; animation: popupShow 0.3s ease-out; }
     .modal-header { padding: 15px 20px; background: #0d6efd; color: white; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; }
     .modal-body { padding: 20px; overflow-y: auto; max-height: 70vh; }
     .modal-footer { padding: 15px 20px; border-top: 1px solid #ddd; text-align: right; background: #f8f9fa; border-radius: 0 0 12px 12px; }
-
     @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @@keyframes popupShow { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>🏢 Quản Lý Nhà Cung Cấp</h3>
-
+    <h3 style="font-weight: 700; color: #0d6efd;">🏢 Quản Lý Nhà Cung Cấp</h3>
     <div class="d-flex gap-2">
         <div class="input-group" style="width: 300px;">
-            <input type="text" class="form-control" placeholder="Tìm kiếm tên, SĐT..."
-                   @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleEnterKey" />
-            <button class="btn btn-primary" @onclick="SearchData">
-                <i class="bi bi-search"></i>
-            </button>
+            <input type="text" class="form-control" placeholder="Tìm kiếm..." @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleEnterKey" />
+            <button class="btn btn-primary" @onclick="SearchData"><i class="bi bi-search"></i>Tìm</button>
         </div>
-
-        <button class="btn btn-success fw-bold shadow-sm" @onclick="ShowCreateForm">
-            <i class="bi bi-plus-lg me-1"></i> Thêm Mới
-        </button>
+        <button class="btn btn-success fw-bold shadow-sm" @onclick="ShowCreateForm"><i class="bi bi-plus-lg me-1"></i> Thêm Mới</button>
     </div>
 </div>
 
-@* --- DANH SÁCH NHÀ CUNG CẤP (DẠNG TABLE) --- *@
-@if (suppliers == null)
-{
-    <div class="text-center mt-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
-    </div>
-}
-else if (suppliers.Count == 0)
-{
-    <div class="alert alert-warning text-center mt-4 border-0 shadow-sm">
-        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
-        Hiện chưa có nhà cung cấp nào. Nhấn "Thêm Mới" để tạo ngay.
-    </div>
-}
+@if (suppliers == null) { <div class="text-center mt-5"><div class="spinner-border text-primary"></div><p>Đang tải...</p></div> }
+else if (suppliers.Count == 0) { <div class="alert alert-warning text-center mt-4">Chưa có dữ liệu.</div> }
 else
 {
     <div class="table-container table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
-                    <th style="width: 25%;">Tên Nhà Cung Cấp</th>
-                    <th style="width: 20%;">Người Liên Hệ</th>
-                    <th style="width: 15%;">Số Điện Thoại</th>
-                    <th style="width: 25%;">Địa Chỉ</th>
-                    <th style="width: 15%;" class="text-end">Hành Động</th>
+                    <th>Tên NCC</th> <th>Liên Hệ</th> <th>SĐT</th> <th>Địa Chỉ</th> <th class="text-end">Hành Động</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in suppliers)
                 {
                     <tr>
-                        <td>
-                            <div class="fw-bold text-primary">@item.SupplierName</div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-person-circle text-muted me-2"></i>
-                                @item.ContactPerson
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge bg-light text-dark border">
-                                <i class="bi bi-telephone-fill text-success me-1" style="font-size: 0.7rem;"></i>
-                                @item.Phone
-                            </span>
-                        </td>
-                        <td>
-                            <div class="text-truncate" style="max-width: 200px;" title="@item.Address">
-                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>
-                                @item.Address
-                            </div>
-                        </td>
+                        <td class="fw-bold text-primary">@item.SupplierName</td>
+                        <td>@item.ContactPerson</td>
+                        <td><span class="badge bg-light text-dark border">@item.Phone</span></td>
+                        <td class="text-truncate" style="max-width: 200px;">@item.Address</td>
                         <td class="text-end">
-                            <button class="btn btn-warning btn-action me-2 shadow-sm"
-                                    @onclick="() => ShowEditForm(item)"
-                                    title="Sửa thông tin">
+                            <button class="btn btn-warning text-dark fw-bold me-2 shadow-sm" 
+                                    @onclick="() => ShowEditForm(item)">
                                 <i class="bi bi-pencil-square me-1"></i> Sửa
                             </button>
-                            
-                            @* Nút xem lịch sử *@
-                            <a href="/suppliers/@item.Id"
-                                class="btn btn-info btn-action shadow-sm"
-                                title="Xem lịch sử nhập hàng">
-                                    <i class="bi bi-clock-history me-1"></i> Lịch sử
-                            </a>    
+                            <button class="btn btn-info text-white fw-bold shadow-sm" 
+                                    @onclick="() => ShowDetailForm(item)">
+                                <i class="bi bi-eye-fill me-1"></i> Chi tiết
+                            </button>
                         </td>
                     </tr>
                 }
@@ -144,50 +67,66 @@ else
     </div>
 }
 
-@* --- POPUP FORM (MODAL - GIỮ NGUYÊN) --- *@
+@* --- MODAL THÊM / SỬA (Giữ nguyên) --- *@
 @if (showForm)
 {
     <div class="modal-overlay" @onclick="CloseFormOutside">
         <div class="custom-modal" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h5 class="mb-0 fw-bold">
-                    @(string.IsNullOrEmpty(currentSupplier.Id) ? "✨ Thêm Nhà Cung Cấp Mới" : "✏️ Cập Nhật Thông Tin")
-                </h5>
+                <h5 class="mb-0 fw-bold">@(string.IsNullOrEmpty(currentSupplier.Id) ? "✨ Thêm Mới" : "✏️ Cập Nhật")</h5>
                 <button type="button" class="btn-close btn-close-white" @onclick="CancelForm"></button>
             </div>
             <div class="modal-body">
                 <EditForm id="supplierForm" Model="currentSupplier" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator />
-                    <ValidationSummary class="text-danger mb-3" />
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tên Nhà Cung Cấp (*)</label>
-                        <InputText class="form-control" @bind-Value="currentSupplier.SupplierName" placeholder="VD: Công ty Sách Phương Nam" />
-                        <ValidationMessage For="@(() => currentSupplier.SupplierName)" />
-                    </div>
-
+                    <div class="mb-3"><label class="fw-bold">Tên NCC (*)</label><InputText class="form-control" @bind-Value="currentSupplier.SupplierName" /></div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Người liên hệ</label>
-                            <InputText class="form-control" @bind-Value="currentSupplier.ContactPerson" placeholder="VD: Anh Nam" />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Số điện thoại</label>
-                            <InputText class="form-control" @bind-Value="currentSupplier.Phone" placeholder="090..." />
-                        </div>
+                        <div class="col-6 mb-3"><label class="fw-bold">Liên hệ</label><InputText class="form-control" @bind-Value="currentSupplier.ContactPerson" /></div>
+                        <div class="col-6 mb-3"><label class="fw-bold">SĐT</label><InputText class="form-control" @bind-Value="currentSupplier.Phone" /></div>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Địa chỉ</label>
-                        <InputTextArea class="form-control" @bind-Value="currentSupplier.Address" rows="3" />
-                    </div>
+                    <div class="mb-3"><label class="fw-bold">Địa chỉ</label><InputTextArea class="form-control" @bind-Value="currentSupplier.Address" rows="3" /></div>
                 </EditForm>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary me-2" @onclick="CancelForm">Hủy bỏ</button>
-                <button type="submit" form="supplierForm" class="btn btn-primary fw-bold px-4">
-                    <i class="bi bi-check2-circle me-1"></i> Lưu Lại
-                </button>
+                <button class="btn btn-secondary me-2" @onclick="CancelForm">Hủy</button>
+                <button type="submit" form="supplierForm" class="btn btn-primary fw-bold">Lưu Lại</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* --- MODAL XEM CHI TIẾT (MỚI THÊM) --- *@
+@if (showDetail)
+{
+    <div class="modal-overlay" @onclick="CloseDetailOutside">
+        <div class="custom-modal" @onclick:stopPropagation="true" style="width: 800px;">
+            <div class="modal-header bg-info">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Chi Tiết Nhà Cung Cấp</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseDetail"></button>
+            </div>
+            <div class="modal-body">
+                @* Thông tin chung (Readonly) *@
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="small text-muted">Tên NCC:</label>
+                        <div class="fw-bold fs-5 text-primary">@detailSupplier.SupplierName</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small text-muted">Người liên hệ:</label>
+                        <div class="fw-bold">@detailSupplier.ContactPerson</div>
+                    </div>
+                    <div class="col-md-6 mt-3">
+                        <label class="small text-muted">Số điện thoại:</label>
+                        <div><i class="bi bi-telephone me-1"></i> @detailSupplier.Phone</div>
+                    </div>
+                    <div class="col-md-6 mt-3">
+                        <label class="small text-muted">Địa chỉ:</label>
+                        <div><i class="bi bi-geo-alt me-1"></i> @detailSupplier.Address</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary fw-bold" @onclick="CloseDetail">Đóng</button>
             </div>
         </div>
     </div>
@@ -196,62 +135,36 @@ else
 @code {
     private List<Supplier>? suppliers;
     private bool showForm = false;
-    private Supplier currentSupplier = new Supplier();
+    private bool showDetail = false;
+    private Supplier currentSupplier = new();
+    private Supplier detailSupplier = new();
     private string searchTerm = "";
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-    }
+    protected override async Task OnInitializedAsync() => await LoadData();
 
     private async Task LoadData()
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
-            suppliers = await StoreService.GetSuppliersAsync();
-        else
-            suppliers = await StoreService.SearchSuppliersAsync(searchTerm);
+        suppliers = string.IsNullOrWhiteSpace(searchTerm) 
+            ? await StoreService.GetSuppliersAsync() 
+            : await StoreService.SearchSuppliersAsync(searchTerm);
     }
 
     private async Task SearchData() => await LoadData();
+    private async Task HandleEnterKey(KeyboardEventArgs e) { if (e.Key == "Enter") await SearchData(); }
 
-    private async Task HandleEnterKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") await SearchData();
-        if (string.IsNullOrWhiteSpace(searchTerm)) await LoadData();
-    }
-
-    private void ShowCreateForm()
-    {
-        currentSupplier = new Supplier();
-        currentSupplier.Id = string.Empty; // Reset ID để biết là Create
-        showForm = true;
-    }
-
-    private void ShowEditForm(Supplier s)
-    {
-        currentSupplier = new Supplier
-        {
-            Id = s.Id,
-            SupplierName = s.SupplierName,
-            ContactPerson = s.ContactPerson,
-            Phone = s.Phone,
-            Address = s.Address,
-            InventoryReceipts = s.InventoryReceipts
-        };
-        showForm = true;
-    }
-
+    private void ShowCreateForm() { currentSupplier = new Supplier(); currentSupplier.Id = string.Empty; showForm = true; }
+    private void ShowEditForm(Supplier s) { currentSupplier = new Supplier { Id = s.Id, SupplierName = s.SupplierName, ContactPerson = s.ContactPerson, Phone = s.Phone, Address = s.Address }; showForm = true; }
     private void CancelForm() => showForm = false;
     private void CloseFormOutside() => showForm = false;
+    private async Task HandleSubmit() { if (string.IsNullOrEmpty(currentSupplier.Id)) await StoreService.CreateSupplierAsync(currentSupplier); else await StoreService.UpdateSupplierAsync(currentSupplier); showForm = false; await LoadData(); }
 
-    private async Task HandleSubmit()
+    // --- LOGIC FORM CHI TIẾT (MỚI) ---
+    private async Task ShowDetailForm(Supplier s)
     {
-        if (string.IsNullOrEmpty(currentSupplier.Id))
-            await StoreService.CreateSupplierAsync(currentSupplier);
-        else
-            await StoreService.UpdateSupplierAsync(currentSupplier);
-
-        showForm = false;
-        await LoadData();
+        var fullInfo = await StoreService.GetSupplierWithHistoryAsync(s.Id);
+        detailSupplier = fullInfo ?? s;
+        showDetail = true;
     }
+    private void CloseDetail() => showDetail = false;
+    private void CloseDetailOutside() => showDetail = false;
 }
