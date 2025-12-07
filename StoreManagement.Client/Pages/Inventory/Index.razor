@@ -3,87 +3,198 @@
 @using StoreManagement.Client.Services
 @inject IStoreService StoreService
 
-<h3>📦 Quản Lý Kho Hàng & Tồn Kho</h3>
+<style>
+    :root { --primary: #4e73df; --danger: #e74a3b; --warning: #f6c23e; --success: #1cc88a; --bg: #f8f9fc; }
+    body { background-color: var(--bg); font-family: 'Segoe UI', sans-serif; }
 
-<div class="row mb-3">
-    <div class="col-md-3">
-        <div class="card text-white bg-danger mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Sắp hết hàng</h5>
-                <p class="card-text fs-4">@books?.Count(b => b.StockQuantity <= 5)</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Tổng sản phẩm</h5>
-                <p class="card-text fs-4">@books?.Count</p>
-            </div>
-        </div>
-    </div>
-</div>
+    /* STATS CARDS */
+    .stats-card {
+        border: none; border-radius: 12px; color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.2s;
+        overflow: hidden; position: relative;
+    }
+    .stats-card:hover { transform: translateY(-5px); }
+    .stats-card .card-body { padding: 25px; display: flex; justify-content: space-between; align-items: center; }
+    .stats-value { font-size: 2.5rem; font-weight: 800; margin: 0; line-height: 1; }
+    .stats-label { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-bottom: 5px; font-weight: 600; }
+    .stats-icon { font-size: 3rem; opacity: 0.3; transform: rotate(-10deg); position: absolute; right: 20px; bottom: 10px; }
 
-@if (books == null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    <table class="table table-bordered align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>Sách</th>
-                <th>Giá Bán</th>
-                <th>Nhập/Xuất/Tồn</th>
-                <th>Trạng thái</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var book in books)
-            {
-                // Logic cảnh báo màu sắc
-                var rowClass = book.StockQuantity == 0 ? "table-danger" : (book.StockQuantity <= 5 ? "table-warning" : "");
-                
-                <tr class="@rowClass">
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <img src="@book.Image" style="width: 40px; margin-right: 10px;" />
-                            <div>
-                                <strong>@book.Title</strong><br/>
-                                <small>@book.Isbn</small>
+    /* TABLE STYLE */
+    .inventory-table-container { background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 20px; }
+    .search-input { border-radius: 20px; padding-left: 40px; border: 1px solid #d1d3e2; background: #fdfdfd; }
+    .search-icon { position: absolute; left: 15px; top: 10px; color: #aaa; }
+
+    .table thead th { background: #f8f9fa; color: #5a5c69; font-weight: 700; border: none; text-transform: uppercase; font-size: 0.8rem; padding: 15px; }
+    .table tbody td { vertical-align: middle; padding: 15px; border-bottom: 1px solid #f0f0f0; color: #5a5c69; }
+    .book-cover { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
+    .book-cover:hover { transform: scale(1.5); z-index: 10; cursor: zoom-in; }
+    
+    .book-title { font-weight: 700; color: var(--primary); display: block; margin-bottom: 2px; }
+    .book-isbn { font-size: 0.8rem; color: #858796; font-family: monospace; letter-spacing: 0.5px; }
+    
+    .stock-badge { font-size: 0.9rem; padding: 6px 12px; border-radius: 30px; font-weight: 600; }
+    .bg-danger-light { background-color: rgba(231, 74, 59, 0.1); color: #e74a3b; }
+    .bg-warning-light { background-color: rgba(246, 194, 62, 0.1); color: #855e05; }
+    .bg-success-light { background-color: rgba(28, 200, 138, 0.1); color: #1cc88a; }
+</style>
+
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 style="font-weight: 800; color: #5a5c69;">📦 Kho Hàng & Tồn Kho</h3>
+    </div>
+
+    @if (books == null)
+    {
+        <div class="text-center mt-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Đang tải dữ liệu...</p></div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card bg-danger">
+                    <div class="card-body">
+                        <div>
+                            <div class="stats-label">Sắp Hết Hàng</div>
+                            <div class="stats-value">@books.Count(b => b.StockQuantity <= 5)</div>
+                        </div>
+                        <i class="bi bi-exclamation-triangle-fill stats-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card bg-success">
+                    <div class="card-body">
+                        <div>
+                            <div class="stats-label">Tổng Sản Phẩm</div>
+                            <div class="stats-value">@books.Count</div>
+                        </div>
+                        <i class="bi bi-box-seam stats-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card bg-primary">
+                    <div class="card-body">
+                        <div>
+                            <div class="stats-label">Tổng Giá Trị</div>
+                            @* Giả định giá trị = Giá bán * Số lượng *@
+                            <div class="stats-value" style="font-size: 1.8rem;">
+                                @((books.Sum(b => b.RetailPrice * b.StockQuantity) / 1000000).ToString("N1")) M
                             </div>
                         </div>
-                    </td>
-                    <td>@book.RetailPrice.ToString("N0") đ</td>
-                    <td>
-                        <div>Tồn hiện tại: <strong>@book.StockQuantity</strong></div>
-                        <small class="text-muted">Đã bán: (Chưa có POS)</small>
-                    </td>
-                    <td>
-                        @if (book.StockQuantity == 0)
+                        <i class="bi bi-currency-dollar stats-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="inventory-table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="position-relative" style="width: 300px;">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" class="form-control search-input" placeholder="Tìm kiếm sách..." @bind="searchText" @bind:event="oninput" />
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm rounded-pill" @onclick="LoadData">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+                    </button>
+                    <a href="/receipts/create" class="btn btn-primary btn-sm rounded-pill fw-bold ms-2">
+                        <i class="bi bi-plus-lg me-1"></i> Nhập Kho
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Hình ảnh</th>
+                            <th style="width: 35%;">Thông tin sách</th>
+                            <th class="text-end">Giá Bán</th>
+                            <th class="text-center">Tồn Kho</th>
+                            <th class="text-center">Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var book in FilteredBooks)
                         {
-                            <span class="badge bg-danger">HẾT HÀNG</span>
+                            <tr>
+                                <td>
+                                    <img src="@(string.IsNullOrEmpty(book.Image) ? "/images/no-image.png" : book.Image)" 
+                                         class="book-cover" 
+                                         onerror="this.src='https://via.placeholder.com/50x75?text=No+Img'" />
+                                </td>
+                                <td>
+                                    <span class="book-title">@book.Title</span>
+                                    <div class="book-isbn"><i class="bi bi-upc-scan me-1"></i>@book.Isbn</div>
+                                    <small class="text-muted"><i class="bi bi-person me-1"></i>@book.Author</small>
+                                </td>
+                                <td class="text-end fw-bold text-dark">
+                                    @book.RetailPrice.ToString("N0") đ
+                                </td>
+                                <td class="text-center">
+                                    <span class="fs-5 fw-bold @(book.StockQuantity <= 5 ? "text-danger" : "text-dark")">
+                                        @book.StockQuantity
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (book.StockQuantity == 0)
+                                    {
+                                        <span class="badge bg-danger-light">HẾT HÀNG</span>
+                                    }
+                                    else if (book.StockQuantity <= 5)
+                                    {
+                                        <span class="badge bg-warning-light">SẮP HẾT</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-light">SẴN SÀNG</span>
+                                    }
+                                </td>
+                            </tr>
                         }
-                        else if (book.StockQuantity <= 5)
-                        {
-                            <span class="badge bg-warning text-dark">SẮP HẾT (@book.StockQuantity)</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-success">Sẵn sàng</span>
-                        }
-                    </td>
-                </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            @if (!FilteredBooks.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-search fs-1"></i>
+                    <p class="mt-2">Không tìm thấy sách nào phù hợp.</p>
+                </div>
             }
-        </tbody>
-    </table>
-}
+        </div>
+    }
+</div>
 
 @code {
-    private List<Book> books;
+    private List<Book>? books;
+    private string searchText = "";
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
         books = await StoreService.GetBooksAsync();
+    }
+
+    // Logic lọc danh sách tại Client (cho nhanh, vì đã tải hết về rồi)
+    private IEnumerable<Book> FilteredBooks
+    {
+        get
+        {
+            if (books == null) return Enumerable.Empty<Book>();
+            if (string.IsNullOrWhiteSpace(searchText)) return books;
+
+            return books.Where(b => 
+                (b.Title?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (b.Isbn?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (b.Author?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+            );
+        }
     }
 }
