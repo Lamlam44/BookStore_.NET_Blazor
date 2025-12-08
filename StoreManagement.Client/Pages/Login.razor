@@ -21,8 +21,8 @@
                         @* <DataAnnotationsValidator /> *@
 
                         <div class="form-floating mb-4">
-                            <InputText id="username" class="form-control" @bind-Value="loginModel.Username" placeholder="Username" />
-                            <label for="username">Tên đăng nhập</label>
+                                <InputText id="email" class="form-control" @bind-Value="loginModel.Email" placeholder="Email" />
+                                    <label for="email">Email</label>
                             
                             @* Đã comment thông báo lỗi *@
                             @* <ValidationMessage For="@(() => loginModel.Username)" /> *@
@@ -67,13 +67,9 @@
     private string? errorMessage;
     private bool isSubmitting = false;
 
-    public class LoginRequest
+        public class LoginRequest
     {
-        // Đã comment các dòng [Required] để tắt validate
-        // [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
-        public string Username { get; set; } = "";
-
-        // [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+        public string Email { get; set; } = "";
         public string Password { get; set; } = "";
     }
 
@@ -84,27 +80,34 @@
 
         try
         {
-            var result = await ApiService.LoginAsync(loginModel.Username, loginModel.Password);
+                var result = await ApiService.LoginAsync(loginModel.Email, loginModel.Password);
 
-            if (result.Success && !string.IsNullOrEmpty(result.Token))
+                if (result.Success && result.Data != null && !string.IsNullOrWhiteSpace(result.Data.AccessToken))
             {
                 var customAuthProvider = (StoreManagement.Client.Services.CustomAuthenticationStateProvider)AuthProvider;
-                await customAuthProvider.MarkUserAsAuthenticated(result.Token);
+                await customAuthProvider.MarkUserAsAuthenticated(result.Data.AccessToken);
 
-                // --- PHÂN QUYỀN ĐIỀU HƯỚNG ---
-                var role = result.Data?.RoleName; 
+                // Small delay/yield to allow auth state propagation before making an authenticated request / navigating
+                await Task.Delay(100);
 
-                if (role == "Admin" || role == "Manager")
+                // Fetch profile to determine role
+                var profile = await ApiService.GetCustomerProfileAsync();
+                var role = profile.Data?.Role ?? string.Empty;
+
+                // Compare roles case-insensitively
+                if (string.Equals(role, "ADMIN", System.StringComparison.OrdinalIgnoreCase) || string.Equals(role, "MANAGER", System.StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Administrator", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    NavigationManager.NavigateTo("/inventory"); 
+                    // Admin landing page uses MainLayout at /admin
+                    NavigationManager.NavigateTo("/admin");
                 }
-                else if (role == "Staff")
+                else if (string.Equals(role, "STAFF", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    NavigationManager.NavigateTo("/timekeeping");
+                    // Staff also land on the admin area/dashboard
+                    NavigationManager.NavigateTo("/admin");
                 }
                 else
                 {
-                    // Khách hàng về trang chủ
+                    // Customer -> home
                     NavigationManager.NavigateTo("/");
                 }
             }

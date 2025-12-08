@@ -7,7 +7,7 @@
         public string Email { get; set; } = string.Empty;
         public string PositionName { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
-        public string RoleName { get; set; } = "Staff"; 
+        public string RoleName { get; set; } = "STAFF"; 
         public bool IsActive { get; set; } = true;
         public DateTime? HireDate { get; set; }
 

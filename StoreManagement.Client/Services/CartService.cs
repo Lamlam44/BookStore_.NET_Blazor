@@ -48,6 +48,12 @@ namespace StoreManagement.Client.Services
 
         public decimal GetTotal() => _items.Sum(i => i.Price * i.Quantity);
 
+        public void Clear()
+        {
+            _items.Clear();
+            NotifyStateChanged();
+        }
+
         private void NotifyStateChanged() => OnChange?.Invoke();
     }
 }

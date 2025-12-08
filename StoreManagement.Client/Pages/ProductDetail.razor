@@ -1,9 +1,74 @@
 @page "/products/{Id}"
 @layout StoreManagement.Client.Layout.CustomerLayout
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject StoreManagement.Client.Services.CartService CartService
+@inject NavigationManager Navigation
 
 <h3>Product Detail</h3>
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (product != null)
+{
+    <div class="row">
+        <div class="col-md-4">
+            <img src="@product.Image" class="img-fluid" alt="@product.Title" />
+        </div>
+        <div class="col-md-8">
+                <h4>@product.Title</h4>
+                <p><strong>ISBN:</strong> @product.Isbn</p>
+                <p><strong>Price:</strong> @product.RetailPrice.ToString("C")</p>
+            <button class="btn btn-primary" @onclick="() => AddToCart(product)">Add to Cart</button>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter]
     public string Id { get; set; }
+
+    private Book? product;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProduct();
+    }
+
+    private async Task LoadProduct()
+    {
+        try
+        {
+            var res = await ApiService.GetProductByIdAsync(Id);
+            if (res.Success && res.Data != null)
+            {
+                product = res.Data;
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Product not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddToCart(Book p)
+    {
+        CartService.AddToCart(p);
+        Navigation.NavigateTo("/cart");
+    }
 }

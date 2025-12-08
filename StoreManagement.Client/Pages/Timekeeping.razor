@@ -1,5 +1,6 @@
 @page "/timekeeping"
-@attribute [Authorize(Roles="Staff")]
+@layout StoreManagement.Client.Layout.AdminLayout
+@attribute [Authorize(Roles="STAFF, ADMIN")]
 @using System.Timers
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services

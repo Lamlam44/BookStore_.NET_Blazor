@@ -29,14 +29,14 @@ namespace StoreManagement.Client.Models
         [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
         public string Password { get; set; } = string.Empty;
 
-        public EmployeeRole Role { get; set; } = EmployeeRole.Staff;
+        public EmployeeRole Role { get; set; } = EmployeeRole.STAFF;
 
         public bool IsActive { get; set; } = true;
     }
 
     public enum EmployeeRole
     {
-        Admin,
-        Staff
+        ADMIN,
+        STAFF
     }
 }

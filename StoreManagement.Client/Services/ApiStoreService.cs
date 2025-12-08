@@ -228,7 +228,7 @@ namespace StoreManagement.Client.Services
         {
             try
             {
-                var dto = new { customer.FullName, customer.Email, customer.PhoneNumber, customer.Address };
+                var dto = new { customer.Name, customer.Email, customer.Phone, customer.Address };
                 var response = await _http.PostAsJsonAsync("api/customers", dto);
                 if (!response.IsSuccessStatusCode) 
                     throw new Exception(await response.Content.ReadAsStringAsync());

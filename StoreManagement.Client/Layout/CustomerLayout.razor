@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject StoreManagement.Client.Services.CartService CartService
+@inject AuthenticationStateProvider AuthProvider
 @using Microsoft.AspNetCore.Components.Authorization
 
 <div class="customer-layout">
@@ -18,8 +19,8 @@
                 @* SEARCH BAR *@
                 <div class="col-md-5">
                     <div class="input-group">
-                        <input type="text" class="form-control border-end-0 rounded-pill rounded-end" placeholder="Tìm kiếm sách..." />
-                        <button class="btn btn-danger border-start-0 rounded-pill rounded-start px-4">
+                        <input @bind="searchTerm" @bind:event="oninput" type="text" class="form-control border-end-0 rounded-pill rounded-end" placeholder="Tìm kiếm sách..." />
+                        <button class="btn btn-danger border-start-0 rounded-pill rounded-start px-4" @onclick="DoSearch">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
@@ -28,20 +29,22 @@
                 @* ICON MENU *@
                 <div class="col-md-4 d-flex justify-content-end align-items-center gap-4">
                     <AuthorizeView>
-                        <Authorized>
+                        <Authorized Context="userAuth">
                             <div class="dropdown">
                                 <a href="#" class="text-decoration-none text-secondary d-flex align-items-center gap-2" data-bs-toggle="dropdown">
                                     <i class="bi bi-person-circle fs-4"></i>
                                     <div>
-                                        <small>Chào, @context.User.Identity?.Name</small>
+                                        <small>Chào, @userAuth.User.Identity?.Name</small>
                                     </div>
                                 </a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="order-history">Lịch sử đơn hàng</a></li>
-                                    <li><a class="dropdown-item" href="profile">Hồ sơ cá nhân</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="logout">Đăng xuất</a></li>
-                                </ul>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="order-history">Lịch sử đơn hàng</a></li>
+                                        <li><a class="dropdown-item" href="profile">Hồ sơ cá nhân</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" @onclick="Logout">Đăng xuất</button>
+                                        </li>
+                                    </ul>
                             </div>
                         </Authorized>
                         <NotAuthorized>
@@ -99,5 +102,29 @@
     public void Dispose()
     {
         CartService.OnChange -= StateHasChanged;
+    }
+
+    private string searchTerm = string.Empty;
+    private void DoSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            Navigation.NavigateTo("/products");
+        }
+        else
+        {
+            Navigation.NavigateTo($"/products?search={System.Net.WebUtility.UrlEncode(searchTerm)}");
+        }
+    }
+
+    private async Task Logout()
+    {
+        if (AuthProvider is StoreManagement.Client.Services.CustomAuthenticationStateProvider customAuthProvider)
+        {
+            await customAuthProvider.MarkUserAsLoggedOut();
+        }
+
+        // Ensure user is navigated back to the customer home (not admin area)
+        Navigation.NavigateTo("/");
     }
 }

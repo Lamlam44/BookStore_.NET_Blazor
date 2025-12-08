@@ -1,0 +1,186 @@
+@page "/customers"
+@layout StoreManagement.Client.Layout.AdminLayout
+@using StoreManagement.Client.Models
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<style>
+    /* Palette: primary, success, danger */
+    .cm-primary { color: #4e73df; }
+    .cm-bg-primary { background-color: #4e73df; color: white; }
+    .cm-success { color: #1cc88a; }
+    .cm-danger { color: #e74a3b; }
+    .cm-card { border-radius: 10px; box-shadow: 0 4px 20px rgba(78,115,223,0.08); }
+</style>
+
+<h3 class="mt-2 cm-primary">Quản lý Khách hàng</h3>
+
+<AuthorizeView Roles="ADMIN">
+    <Authorized Context="auth">
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <div class="card cm-card p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">Thêm khách hàng</h5>
+                    </div>
+                    <EditForm Model="newCustomer" OnValidSubmit="CreateCustomer">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <InputText class="form-control" @bind-Value="newCustomer.Name" placeholder="Họ và tên" />
+                            </div>
+                            <div class="col-md-3">
+                                <InputText class="form-control" @bind-Value="newCustomer.Phone" placeholder="Số điện thoại" />
+                            </div>
+                            <div class="col-md-4">
+                                <InputText class="form-control" @bind-Value="newCustomer.Address" placeholder="Địa chỉ" />
+                            </div>
+                            <div class="col-md-1 d-grid">
+                                <button class="btn cm-bg-primary ms-1">Thêm</button>
+                            </div>
+                        </div>
+                    </EditForm>
+                    @if (!string.IsNullOrEmpty(formMessage))
+                    {
+                        <div class="mt-2 alert alert-info">@formMessage</div>
+                    }
+
+                    @* Search moved here under the add form *@
+                    <div class="mt-3">
+                        <div class="d-flex mb-2">
+                            <input class="form-control me-2" placeholder="Tìm theo tên, email, số điện thoại" @bind="searchText" @bind:event="oninput" />
+                            <button class="btn btn-outline-secondary" @onclick="ApplySearch">Tìm</button>
+                            <button class="btn btn-outline-secondary ms-2" @onclick="ClearSearch">Xóa</button>
+                        </div>
+                        <small class="text-muted">Tìm kiếm sẽ lọc kết quả hiện có. Backend chỉ hỗ trợ phân trang.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card cm-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Danh sách khách hàng</h5>
+            </div>
+            <div class="card-body">
+                @if (filteredCustomers == null)
+                {
+                    <p>Đang tải...</p>
+                }
+                else if (!filteredCustomers.Any())
+                {
+                    <p class="text-muted">Không tìm thấy khách hàng.</p>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Tên</th>
+                                <th>Email</th>
+                                <th>SĐT</th>
+                                <th>Địa chỉ</th>
+                                <th>Ngày tạo</th>
+                                @* Action column removed (backend does not support update/delete) *@
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in filteredCustomers)
+                            {
+                                <tr>
+                                    <td style="width:80px">@c.Id</td>
+                                    <td>@(string.IsNullOrEmpty(c.Name) ? "-" : c.Name)</td>
+                                    <td>@(string.IsNullOrEmpty(c.Email) ? "-" : c.Email)</td>
+                                    <td>@(string.IsNullOrEmpty(c.Phone) ? "-" : c.Phone)</td>
+                                    <td>@c.Address</td>
+                                    <td>@(c.CreatedAt.ToString("g"))</td>
+                                    @* actions removed *@
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        @* Edit panel removed because backend does not provide update endpoint. *@
+    </Authorized>
+    <NotAuthorized>
+        <p>Bạn không có quyền truy cập trang này.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<Customer> customers = new();
+    private IEnumerable<Customer> filteredCustomers = new List<Customer>();
+    private Customer newCustomer = new();
+    private string? formMessage;
+
+    private string searchText = string.Empty;
+
+    // Edit/update/delete not supported by backend; UI simplified accordingly
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        var res = await ApiService.GetCustomersAsync(1, 100);
+        if (res.Success && res.Data != null)
+        {
+            customers = res.Data.Items;
+        }
+        else
+        {
+            customers = new List<Customer>();
+        }
+        ApplySearch();
+    }
+
+    private void ApplySearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            filteredCustomers = customers;
+        }
+        else
+        {
+            var q = searchText.Trim();
+            filteredCustomers = customers.Where(c =>
+                ((c.Name) ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                ((c.Email) ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                ((c.Phone) ?? string.Empty).Contains(q, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchText = string.Empty;
+        ApplySearch();
+    }
+
+    private async Task CreateCustomer()
+    {
+        var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn thêm khách hàng này?");
+        if (!ok) return;
+
+        formMessage = null;
+        var res = await ApiService.CreateCustomerAsync(newCustomer.Name, newCustomer.Phone, newCustomer.Address);
+        if (res.Success)
+        {
+            formMessage = "Thêm khách hàng thành công.";
+            await LoadCustomers();
+            newCustomer = new();
+        }
+        else
+        {
+            formMessage = res.Message ?? "Thêm khách hàng thất bại.";
+        }
+    }
+
+    // update/delete helpers removed because backend doesn't provide endpoints; keep list read-only and creation only
+}

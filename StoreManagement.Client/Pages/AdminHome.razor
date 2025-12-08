@@ -1,0 +1,65 @@
+@page "/admin"
+@layout StoreManagement.Client.Layout.AdminLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthProvider
+
+<AuthorizeView>
+    <Authorized Context="auth">
+        @* Dashboard for Admin and Staff. Links shown depend on role *@
+        <h3 class="mt-3">Bảng điều khiển</h3>
+
+        <AuthorizeView Roles="ADMIN">
+            <Authorized Context="adm">
+                <div class="card my-3">
+                    <div class="card-header">Quản trị viên</div>
+                    <div class="card-body">
+                        <ul>
+                            <li><a href="/customers">Quản lý Khách hàng</a></li>
+                            <li><a href="/inventory">Quản lý Kho sách</a></li>
+                            <li><a href="/receipts/create">Nhập hàng</a></li>
+                            <li><a href="/suppliers">Quản lý Nhà cung cấp</a></li>
+                            <li><a href="/vouchers">Quản lý Khuyến mãi</a></li>
+                            <li><a href="/timekeeping">Chấm công</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="STAFF,ADMIN">
+            <Authorized Context="stf">
+                <div class="card my-3">
+                    <div class="card-header">Nhân viên</div>
+                    <div class="card-body">
+                        <ul>
+                            <li><a href="/inventory">Kho sách</a></li>
+                            <li><a href="/timekeeping">Chấm công</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+    </Authorized>
+    <NotAuthorized>
+        @* If user is not authenticated, redirect to login. If authenticated but lacks role, show a message. *@
+        @code {
+            protected override async Task OnInitializedAsync()
+            {
+                // Safely get authentication state
+                var authState = await (AuthProvider?.GetAuthenticationStateAsync() ?? Task.FromResult(new AuthenticationState(new System.Security.Claims.ClaimsPrincipal())));
+                var user = authState.User;
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    NavigationManager.NavigateTo("/login");
+                }
+                // else: user is authenticated but not in Admin/Staff role -> do not redirect, show message below
+            }
+        }
+        <div class="alert alert-warning">Bạn không có quyền truy cập trang này.</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+}

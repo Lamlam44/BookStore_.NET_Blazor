@@ -9,10 +9,10 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. ACCOUNTS (Tài khoản - Độc lập)
 -- =====================================================
 INSERT INTO `Accounts` (Id, Username, PasswordHash, Email, PositionName, Phone, RoleName, IsActive, HireDate, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('acc-admin-001', 'admin', '$2a$11$DyVN1GyOqLvLVRwNB3LjWO0aEjTHjJiMvpVyTBs1e9hVjVvqPYDdK', 'admin@bookstore.com', 'Quản lý cửa hàng', '0923456789', 'Admin', 1, '2024-01-15', NOW(), NOW(), 0),
-('acc-staff-001', 'staff01', '$2a$11$bvVD2eW8nj9k8lLmPqRxzO.d8eKsJzYzVxYxZkHkI9eYfXvVpqMXW', 'staff01@bookstore.com', 'Nhân viên bán hàng', '0933456789', 'Staff', 1, '2024-02-01', NOW(), NOW(), 0),
-('acc-staff-002', 'staff02', '$2a$11$vVyYzxAb.kLmNoPqRsT9aU1vVyYzxAbCdEfGhIjKlMnOpQrStUvWx', 'staff02@bookstore.com', 'Nhân viên kho', '0943456789', 'Staff', 1, '2024-02-15', NOW(), NOW(), 0),
-('acc-cashier-001', 'cashier01', '$2a$11$cDxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQrStUv', 'cashier01@bookstore.com', 'Thu ngân', '0953456789', 'Staff', 1, '2024-03-01', NOW(), NOW(), 0);
+('acc-admin-001', 'admin', '$2a$11$DyVN1GyOqLvLVRwNB3LjWO0aEjTHjJiMvpVyTBs1e9hVjVvqPYDdK', 'admin@bookstore.com', 'Quản lý cửa hàng', '0923456789', 'ADMIN', 1, '2024-01-15', NOW(), NOW(), 0),
+('acc-staff-001', 'staff01', '$2a$11$bvVD2eW8nj9k8lLmPqRxzO.d8eKsJzYzVxYxZkHkI9eYfXvVpqMXW', 'staff01@bookstore.com', 'Nhân viên bán hàng', '0933456789', 'STAFF', 1, '2024-02-01', NOW(), NOW(), 0),
+('acc-staff-002', 'staff02', '$2a$11$vVyYzxAb.kLmNoPqRsT9aU1vVyYzxAbCdEfGhIjKlMnOpQrStUvWx', 'staff02@bookstore.com', 'Nhân viên kho', '0943456789', 'STAFF', 1, '2024-02-15', NOW(), NOW(), 0),
+('acc-cashier-001', 'cashier01', '$2a$11$cDxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQrStUv', 'cashier01@bookstore.com', 'Thu ngân', '0953456789', 'STAFF', 1, '2024-03-01', NOW(), NOW(), 0);
 
 -- =====================================================
 -- 2. CATEGORIES (Danh mục - Độc lập)

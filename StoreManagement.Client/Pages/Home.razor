@@ -1,7 +1,8 @@
 ﻿@page "/"
 @layout StoreManagement.Client.Layout.CustomerLayout
 @using StoreManagement.Client.Models
-@inject HttpClient Http
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject StoreManagement.Client.Services.CartService CartService
 
 <PageTitle>Trang chủ bán sách</PageTitle>
 
@@ -24,11 +25,12 @@
                 <div class="col">
                     <div class="card h-100 shadow-sm border-0 hover-shadow">
                         @* SỬA 1: Dùng item.Image thay vì item.ImageUrl *@
-                        <div class="position-relative" style="height: 280px; overflow: hidden; background: #f8f9fa;">
-                            <img src="@(string.IsNullOrEmpty(item.Image) ? "https://via.placeholder.com/300x400?text=No+Image" : item.Image)" 
-                                 class="card-img-top h-100 w-100" 
-                                 style="object-fit: contain; padding: 10px;" 
-                                 alt="@item.Title">
+                           <div class="position-relative" style="height: 280px; overflow: hidden; background: #f8f9fa;">
+                           <img src="@(string.IsNullOrEmpty(item.Image) ? "/images/no-image.svg" : item.Image)" 
+                               class="card-img-top h-100 w-100" 
+                               style="object-fit: contain; padding: 10px;" 
+                               alt="@item.Title"
+                               onerror="this.src='/images/no-image.svg'" />
                         </div>
                         
                         <div class="card-body d-flex flex-column">
@@ -67,56 +69,33 @@
 @code {
     private List<Book>? books;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadMockBooks();
+        await LoadBooksFromApi();
     }
 
-    private void LoadMockBooks()
+    private async Task LoadBooksFromApi()
     {
-        // Mock Data khớp với Model Book.cs của bạn
-        books = new List<Book>
+        try
         {
-            new Book 
-            { 
-                Id = Guid.NewGuid().ToString(), 
-                Title = "Dế Mèn Phiêu Lưu Ký", 
-                RetailPrice = 50000, // Khớp tên biến
-                Author = "Tô Hoài", 
-                Image = "https://upload.wikimedia.org/wikipedia/vi/8/8c/DeMenPhieuLuuKy-Bia1941.jpg" // Link ảnh thật cho đẹp
-            },
-            new Book 
-            { 
-                Id = Guid.NewGuid().ToString(), 
-                Title = "Nhà Giả Kim", 
-                RetailPrice = 79000, 
-                Author = "Paulo Coelho",
-                Image = "https://cdn0.fahasa.com/media/catalog/product/n/h/nha-gia-kim-tai-ban-2020.jpg"
-            },
-            new Book 
-            { 
-                Id = Guid.NewGuid().ToString(), 
-                Title = "Đắc Nhân Tâm", 
-                RetailPrice = 85000, 
-                Author = "Dale Carnegie",
-                Image = "https://cdn0.fahasa.com/media/catalog/product/i/m/image_195509_1_36793.jpg"
-            },
-            new Book 
-            { 
-                Id = Guid.NewGuid().ToString(), 
-                Title = "Harry Potter và Hòn đá Phù thủy", 
-                RetailPrice = 250000, 
-                Author = "J.K. Rowling",
-                Image = "https://cdn0.fahasa.com/media/catalog/product/h/a/harry-potter-va-hon-da-phu-thuy-bia-mem.jpg"
-            },
-             new Book 
-            { 
-                Id = Guid.NewGuid().ToString(), 
-                Title = "Lập trình C# Căn bản", 
-                RetailPrice = 120000, 
-                Author = "Microsoft",
-                // Không điền Image để test ảnh mặc định
+            var res = await ApiService.GetProductsAsync();
+            if (res != null && res.Success)
+            {
+                books = res.Data;
             }
-        };
+            else
+            {
+                books = new List<Book>();
+            }
+        }
+        catch
+        {
+            books = new List<Book>();
+        }
+    }
+
+    private void AddToCart(Book b)
+    {
+        CartService.AddToCart(b);
     }
 }

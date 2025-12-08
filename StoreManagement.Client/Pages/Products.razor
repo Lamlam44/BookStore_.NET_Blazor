@@ -1,9 +1,19 @@
 @page "/products"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @layout StoreManagement.Client.Layout.CustomerLayout
 @inject ApiService ApiService
 @inject CartService CartService
 
 <h3>Sản Phẩm</h3>
+
+<div class="mb-3 d-flex">
+    <input class="form-control me-2" placeholder="Tìm kiếm sản phẩm" @bind="searchTerm" @bind:event="oninput" />
+    <button class="btn btn-outline-primary" @onclick="Search">Tìm</button>
+</div>
 
 @if (isLoading)
 {
@@ -24,6 +34,7 @@ else if (products != null)
                     <div class="card-body">
                         <h5 class="card-title">@product.Title</h5>
                         <p class="card-text">@product.RetailPrice.ToString("C")</p>
+                        <a class="btn btn-sm btn-secondary me-2" href="/products/@product.Id">Chi tiết</a>
                         <button class="btn btn-primary" @onclick="() => AddToCart(product)">Add to Cart</button>
                     </div>
                 </div>
@@ -36,6 +47,10 @@ else if (products != null)
     private List<Book>? products;
     private bool isLoading = true;
     private string? errorMessage;
+    private string searchTerm = string.Empty;
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "search")]
+    public string? search { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,6 +69,44 @@ else if (products != null)
         catch (Exception ex)
         {
             errorMessage = $"Failed to load products: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            searchTerm = search;
+            await Search();
+        }
+    }
+
+    private async Task Search()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var response = await ApiService.GetProductsAsync();
+                if (response.Success) products = response.Data;
+                else errorMessage = response.Message;
+            }
+            else
+            {
+                var response = await ApiService.SearchProductsAsync(searchTerm);
+                if (response.Success) products = response.Data;
+                else errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
         }
         finally
         {

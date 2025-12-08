@@ -12,22 +12,51 @@
     <main>
         <div class="top-row px-4">
             <AuthorizeView>
-                <Authorized>
-                    <span class="me-3">Xin chào, <strong>@context.User.Identity?.Name</strong></span>
-                    <a href="/profile">Trang cá nhân</a>
-                    <a href="/order-history" class="ms-3">Lịch sử mua hàng</a>
+                <Authorized Context="auth">
+                    <span class="me-3">Xin chào, <strong>@auth.User.Identity?.Name</strong></span>
+                    
+                    @* CHỈ HIỂN THỊ CÁC MỤC NÀY NẾU KHÔNG PHẢI LÀ ADMIN HOẶC STAFF (so sánh không phân biệt hoa thường) *@
+                    @{
+                        var roleClaim = auth.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
+                        var isAdmin = string.Equals(roleClaim, "ADMIN", System.StringComparison.OrdinalIgnoreCase) || string.Equals(roleClaim, "ADMIN", System.StringComparison.OrdinalIgnoreCase);
+                        var isStaff = string.Equals(roleClaim, "STAFF", System.StringComparison.OrdinalIgnoreCase) || string.Equals(roleClaim, "STAFF", System.StringComparison.OrdinalIgnoreCase);
+                        if (!isAdmin && !isStaff)
+                        {
+                            <a href="/profile">Trang cá nhân</a>
+                            <a href="/orders" class="ms-3">Lịch sử mua hàng</a>
+                        }
+                    }
+
                     <button class="btn btn-link ms-3" @onclick="Logout">Đăng xuất</button>
                 </Authorized>
                 <NotAuthorized>
                     <a href="/login" class="ms-3">Nhân viên</a>
-                    <a href="/customer-login" class="ms-3">Đăng nhập</a>
+                    <a href="/login" class="ms-3">Đăng nhập</a>
                     <a href="/customer-register" class="ms-3">Đăng ký</a>
                 </NotAuthorized>
             </AuthorizeView>
 
-            <a href="/cart" class="ms-auto">
-                <span class="oi oi-cart" aria-hidden="true"></span> Giỏ hàng (@CartService.GetCartItems().Count)
-            </a>
+            @* ẨN GIỎ HÀNG NẾU LÀ ADMIN HOẶC STAFF (so sánh không phân biệt hoa thường) *@
+            <AuthorizeView>
+                <Authorized Context="auth2">
+                    @{
+                        var roleClaim2 = auth2.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
+                        var isAdmin2 = string.Equals(roleClaim2, "ADMIN", System.StringComparison.OrdinalIgnoreCase);
+                        var isStaff2 = string.Equals(roleClaim2, "STAFF", System.StringComparison.OrdinalIgnoreCase);
+                        if (!isAdmin2 && !isStaff2)
+                        {
+                            <a href="/cart" class="ms-auto">
+                                <span class="oi oi-cart" aria-hidden="true"></span> Giỏ hàng (@CartService.GetCartItems().Count)
+                            </a>
+                        }
+                    }
+                </Authorized>
+                <NotAuthorized>
+                     <a href="/cart" class="ms-auto">
+                        <span class="oi oi-cart" aria-hidden="true"></span> Giỏ hàng (@CartService.GetCartItems().Count)
+                    </a>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -44,8 +73,12 @@
 
     private async Task Logout()
     {
-        var customAuthProvider = (CustomAuthenticationStateProvider)AuthProvider;
-        await customAuthProvider.MarkUserAsLoggedOut();
+        // Kiểm tra xem AuthProvider có đúng kiểu CustomAuthenticationStateProvider không trước khi ép kiểu
+        if (AuthProvider is CustomAuthenticationStateProvider customAuthProvider)
+        {
+            await customAuthProvider.MarkUserAsLoggedOut();
+        }
+        // Sau khi logout, chuyển về trang Home cho mọi vai trò
         Navigation.NavigateTo("/");
     }
 

@@ -10,8 +10,17 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // --- HTTP Client ---
-builder.Services.AddScoped(sp => new HttpClient { 
-    BaseAddress = new Uri("http://localhost:5254") 
+// Register a message handler that attaches Authorization header from local storage
+builder.Services.AddScoped<AuthorizationMessageHandler>();
+builder.Services.AddScoped(sp =>
+{
+    var handler = sp.GetRequiredService<AuthorizationMessageHandler>();
+    // Ensure inner handler exists
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler)
+    {
+        BaseAddress = new Uri("http://localhost:5254")
+    };
 });
 
 // --- App Services ---
@@ -21,8 +30,9 @@ builder.Services.AddSingleton<CartService>();
 
 // --- Authentication & Authorization ---
 builder.Services.AddBlazoredLocalStorage();
+// Use real JWT-based auth provider instead of test provider
+builder.Services.AddScoped<AuthenticationStateProvider, StoreManagement.Client.Services.CustomAuthenticationStateProvider>();
 builder.Services.AddAuthorizationCore();
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 
 
 await builder.Build().RunAsync();
