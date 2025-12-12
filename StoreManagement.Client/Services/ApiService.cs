@@ -127,57 +127,57 @@ namespace StoreManagement.Client.Services
         // }
 
         // --- Timekeeping ---
-        public async Task<ApiResponse<List<ShiftHistoryEntry>>> GetShiftHistoryAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<ShiftHistoryEntry>>>("api/timekeeping/history?PageNumber=1&PageSize=1000");
-                if (response?.Success == true)
-                {
-                    return new ApiResponse<List<ShiftHistoryEntry>>
-                    {
-                        Success = true,
-                        Data = response.Data?.Items ?? new List<ShiftHistoryEntry>(),
-                        Message = response.Message
-                    };
-                }
-                return new ApiResponse<List<ShiftHistoryEntry>> { Success = false, Message = response?.Message ?? "Failed to get shift history" };
-            }
-            catch (Exception ex)
-            {
-                return new ApiResponse<List<ShiftHistoryEntry>> { Success = false, Message = $"Error: {ex.Message}" };
-            }
-        }
+        //public async Task<ApiResponse<List<ShiftHistoryEntry>>> GetShiftHistoryAsync()
+        //{
+        //    try
+        //    {
+        //        var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<ShiftHistoryEntry>>>("api/timekeeping/history?PageNumber=1&PageSize=1000");
+        //        if (response?.Success == true)
+        //        {
+        //            return new ApiResponse<List<ShiftHistoryEntry>>
+        //            {
+        //                Success = true,
+        //                Data = response.Data?.Items ?? new List<ShiftHistoryEntry>(),
+        //                Message = response.Message
+        //            };
+        //        }
+        //        return new ApiResponse<List<ShiftHistoryEntry>> { Success = false, Message = response?.Message ?? "Failed to get shift history" };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ApiResponse<List<ShiftHistoryEntry>> { Success = false, Message = $"Error: {ex.Message}" };
+        //    }
+        //}
 
-        public async Task<ApiResponse<bool>> StartShiftAsync()
-        {
-            try
-            {
-                await EnsureAuthHeaderAsync();
-                var response = await _httpClient.PostAsJsonAsync("api/timekeeping/start", new { });
-                return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
-                    new ApiResponse { Success = false, Message = "Start shift failed" };
-            }
-            catch (Exception ex)
-            {
-                return new ApiResponse { Success = false, Message = $"Error: {ex.Message}" };
-            }
-        }
+        //public async Task<ApiResponse<bool>> StartShiftAsync()
+        //{
+        //    try
+        //    {
+        //        await EnsureAuthHeaderAsync();
+        //        var response = await _httpClient.PostAsJsonAsync("api/timekeeping/start", new { });
+        //        return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
+        //            new ApiResponse { Success = false, Message = "Start shift failed" };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ApiResponse { Success = false, Message = $"Error: {ex.Message}" };
+        //    }
+        //}
 
-        public async Task<ApiResponse<bool>> EndShiftAsync()
-        {
-            try
-            {
-                await EnsureAuthHeaderAsync();
-                var response = await _httpClient.PostAsJsonAsync("api/timekeeping/end", new { });
-                return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
-                    new ApiResponse { Success = false, Message = "End shift failed" };
-            }
-            catch (Exception ex)
-            {
-                return new ApiResponse { Success = false, Message = $"Error: {ex.Message}" };
-            }
-        }
+        //public async Task<ApiResponse<bool>> EndShiftAsync()
+        //{
+        //    try
+        //    {
+        //        await EnsureAuthHeaderAsync();
+        //        var response = await _httpClient.PostAsJsonAsync("api/timekeeping/end", new { });
+        //        return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
+        //            new ApiResponse { Success = false, Message = "End shift failed" };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ApiResponse { Success = false, Message = $"Error: {ex.Message}" };
+        //    }
+        //}
 
         // --- Customer Authentication ---
         public async Task<ApiResponse<AuthResponse>> CustomerLoginAsync(string email, string password)
@@ -416,7 +416,7 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                return await _httpClient.GetFromJsonAsync<ApiResponse<Invoice>>($"api/orders/{id}") ??
+                return await _httpClient.GetFromJsonAsync<ApiResponse<Invoice>>($"api/orders/detail/{id}") ??
                     new ApiResponse<Invoice> { Success = false, Message = "Order not found" };
             }
             catch (Exception ex)

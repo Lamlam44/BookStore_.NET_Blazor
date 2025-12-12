@@ -63,8 +63,6 @@ namespace StoreManagement.Client.Services
             if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
         }
 
-        public async Task DeleteSupplierAsync(string id) => await _http.DeleteAsync($"api/suppliers/{id}");
-
         // ==========================================
         // 2. KHUYẾN MÃI (VOUCHER)
         // ==========================================
@@ -127,20 +125,21 @@ namespace StoreManagement.Client.Services
             }
         }
 
-        public Task<Book?> GetBookByIdAsync(string id) 
+        public async Task<Book?> GetBookByIdAsync(string id) 
         {
             try 
             {
-                return _http.GetFromJsonAsync<Book>($"api/products/{id}");
+                var response = await _http.GetFromJsonAsync<ApiResponse<Book>>($"api/products/{id}");
+                return response?.Data;
             }
-            catch { return Task.FromResult<Book?>(null); }
+            catch { return null; }
         }
 
         public async Task<List<Book>> SearchBooksAsync(string keyword)
         {
             try 
             {
-                var url = $"api/products/search?Query={keyword}&PageNumber=1&PageSize=10";
+                var url = $"api/products/search?SearchTerm={System.Net.WebUtility.UrlEncode(keyword)}&PageNumber=1&PageSize=10";
                 var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>(url);
                 return response?.Data?.Items ?? new List<Book>();
             }

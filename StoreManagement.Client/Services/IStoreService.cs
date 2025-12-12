@@ -15,7 +15,6 @@ namespace StoreManagement.Client.Services
         Task<Supplier?> GetSupplierWithHistoryAsync(string id);
         Task CreateSupplierAsync(Supplier supplier);
         Task UpdateSupplierAsync(Supplier supplier);
-        Task DeleteSupplierAsync(string id);
         Task<List<Supplier>> SearchSuppliersAsync(string keyword);
 
         // Vouchers

@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject CartService CartService
 @inject AuthenticationStateProvider AuthProvider
@@ -10,33 +10,32 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
+        <div class="top-row px-4 shadow-sm">
             <AuthorizeView>
                 <Authorized Context="auth">
                     <span class="me-3">Xin chào, <strong>@auth.User.Identity?.Name</strong></span>
                     
-                    @* CHỈ HIỂN THỊ CÁC MỤC NÀY NẾU KHÔNG PHẢI LÀ ADMIN HOẶC STAFF (so sánh không phân biệt hoa thường) *@
                     @{
                         var roleClaim = auth.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
-                        var isAdmin = string.Equals(roleClaim, "ADMIN", System.StringComparison.OrdinalIgnoreCase) || string.Equals(roleClaim, "ADMIN", System.StringComparison.OrdinalIgnoreCase);
-                        var isStaff = string.Equals(roleClaim, "STAFF", System.StringComparison.OrdinalIgnoreCase) || string.Equals(roleClaim, "STAFF", System.StringComparison.OrdinalIgnoreCase);
+                        var isAdmin = string.Equals(roleClaim, "ADMIN", System.StringComparison.OrdinalIgnoreCase);
+                        var isStaff = string.Equals(roleClaim, "STAFF", System.StringComparison.OrdinalIgnoreCase);
+
                         if (!isAdmin && !isStaff)
                         {
-                            <a href="/profile">Trang cá nhân</a>
-                            <a href="/orders" class="ms-3">Lịch sử mua hàng</a>
+                            <a href="/profile" class="nav-link-style">Trang cá nhân</a>
+                            <a href="/orders" class="nav-link-style ms-3">Lịch sử mua hàng</a>
                         }
                     }
 
-                    <button class="btn btn-link ms-3" @onclick="Logout">Đăng xuất</button>
+                    <button class="btn btn-link nav-link-style ms-3" @onclick="Logout">Đăng xuất</button>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="/login" class="ms-3">Nhân viên</a>
-                    <a href="/login" class="ms-3">Đăng nhập</a>
-                    <a href="/customer-register" class="ms-3">Đăng ký</a>
+                    <a href="/login" class="nav-link-style ms-3">Nhân viên</a>
+                    <a href="/login" class="nav-link-style ms-3">Đăng nhập</a>
+                    <a href="/customer-register" class="nav-link-style ms-3">Đăng ký</a>
                 </NotAuthorized>
             </AuthorizeView>
 
-            @* ẨN GIỎ HÀNG NẾU LÀ ADMIN HOẶC STAFF (so sánh không phân biệt hoa thường) *@
             <AuthorizeView>
                 <Authorized Context="auth2">
                     @{
@@ -45,14 +44,14 @@
                         var isStaff2 = string.Equals(roleClaim2, "STAFF", System.StringComparison.OrdinalIgnoreCase);
                         if (!isAdmin2 && !isStaff2)
                         {
-                            <a href="/cart" class="ms-auto">
+                            <a href="/cart" class="ms-auto cart-link">
                                 <span class="oi oi-cart" aria-hidden="true"></span> Giỏ hàng (@CartService.GetCartItems().Count)
                             </a>
                         }
                     }
                 </Authorized>
                 <NotAuthorized>
-                     <a href="/cart" class="ms-auto">
+                     <a href="/cart" class="ms-auto cart-link">
                         <span class="oi oi-cart" aria-hidden="true"></span> Giỏ hàng (@CartService.GetCartItems().Count)
                     </a>
                 </NotAuthorized>
@@ -60,8 +59,16 @@
         </div>
 
         <article class="content px-4">
-            @Body
+            <div class="container-fluid">
+                @Body
+            </div>
         </article>
+
+        <footer class="footer mt-auto py-3 bg-light">
+            <div class="container text-center">
+                <span class="text-muted">© 2025 BookStore - All rights reserved.</span>
+            </div>
+        </footer>
     </main>
 </div>
 
@@ -73,12 +80,10 @@
 
     private async Task Logout()
     {
-        // Kiểm tra xem AuthProvider có đúng kiểu CustomAuthenticationStateProvider không trước khi ép kiểu
         if (AuthProvider is CustomAuthenticationStateProvider customAuthProvider)
         {
             await customAuthProvider.MarkUserAsLoggedOut();
         }
-        // Sau khi logout, chuyển về trang Home cho mọi vai trò
         Navigation.NavigateTo("/");
     }
 
