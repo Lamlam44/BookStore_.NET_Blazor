@@ -1,0 +1,155 @@
+@page "/staff"
+@layout StoreManagement.Client.Layout.AdminLayout
+@using StoreManagement.Client.Models
+
+@* 
+    TODO:
+    - Inject an HttpClient or a dedicated service for staff management.
+    - Call API to fetch the list of staff in OnInitializedAsync.
+    - Implement SaveStaff to call a POST/PUT endpoint.
+    - Implement ToggleStaffStatus to call a PUT/PATCH endpoint.
+*@
+
+<h3 class="mb-4">Quản lý Nhân viên</h3>
+
+<div class="row mb-3">
+    <div class="col">
+        <button class="btn btn-primary" @onclick="() => isEditFormVisible = true">
+            <i class="oi oi-plus"></i> Thêm nhân viên
+        </button>
+    </div>
+</div>
+
+@if (isEditFormVisible)
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Thông tin Nhân viên</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@currentStaff" OnValidSubmit="SaveStaff">
+                <DataAnnotationsValidator />
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Họ tên</label>
+                        <InputText class="form-control" @bind-Value="currentStaff.Username" />
+                        <ValidationMessage For="@(() => currentStaff.Username)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Username</label>
+                        <InputText class="form-control" @bind-Value="currentStaff.Username" />
+                        <ValidationMessage For="@(() => currentStaff.Username)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Số điện thoại</label>
+                        <InputText class="form-control" @bind-Value="currentStaff.Phone" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Vị trí</label>
+                        <InputText class="form-control" @bind-Value="currentStaff.PositionName" />
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="() => isEditFormVisible = false">Hủy</button>
+                    <button type="submit" class="btn btn-success">Lưu</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Danh sách Nhân viên</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Họ tên</th>
+                    <th>Username</th>
+                    <th>SĐT</th>
+                    <th>Vị trí</th>
+                    <th>Ngày vào làm</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var staff in staffList)
+                {
+                    <tr>
+                        <td>@staff.Username</td>
+                        <td>@staff.Username</td>
+                        <td>@staff.Phone</td>
+                        <td>@staff.PositionName</td>
+                        <td>@staff.HireDate?.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <span class="badge @(staff.IsActive ? "bg-success" : "bg-secondary")">
+                                @(staff.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" title="Sửa">
+                                <i class="oi oi-pencil"></i> Sửa
+                            </button>
+                            <button class="btn btn-sm @(staff.IsActive ? "btn-outline-danger" : "btn-outline-success")" 
+                                    title="@(staff.IsActive ? "Khóa" : "Mở khóa")"
+                                    @onclick="() => ToggleStaffStatus(staff)">
+                                <i class="oi @(staff.IsActive ? "oi-lock-locked" : "oi-lock-unlocked")"></i> @(staff.IsActive ? "Khóa" : "Mở khóa")
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Account> staffList = new List<Account>();
+    private Account currentStaff = new Account();
+    private bool isEditFormVisible = false;
+
+    protected override void OnInitialized()
+    {
+        LoadStaffList();
+    }
+
+    private void LoadStaffList()
+    {
+        // Mock data for staff list
+        staffList = new List<Account>
+        {
+            new Account { Id = "1", Username = "Nguyễn Văn A", Phone = "0912345678", PositionName = "Quản lý", HireDate = new DateTime(2023, 1, 15), IsActive = true },
+            new Account { Id = "2", Username = "Trần Thị B", Phone = "0987654321", PositionName = "Nhân viên Bán hàng", HireDate = new DateTime(2023, 3, 20), IsActive = true },
+            new Account { Id = "3", Username = "Lê Văn C", Phone = "0905123456", PositionName = "Nhân viên Kho", HireDate = new DateTime(2022, 11, 10), IsActive = false },
+            new Account { Id = "4", Username = "Phạm Thị D", Phone = "0934567890", PositionName = "Nhân viên Bán hàng", HireDate = new DateTime(2024, 2, 5), IsActive = true },
+            new Account { Id = "5", Username = "Hoàng Văn E", Phone = "0978901234", PositionName = "Nhân viên Thu ngân", HireDate = new DateTime(2024, 5, 1), IsActive = true }
+        };
+    }
+
+    private void SaveStaff()
+    {
+        // TODO: Call API here to save the staff (create or update)
+        Console.WriteLine($"Gọi API lưu nhân viên: {currentStaff.Username}...");
+        
+        // After saving, hide form and refresh list (mocked)
+        isEditFormVisible = false;
+        currentStaff = new Account(); // Reset form
+        LoadStaffList(); // Re-load mock data
+    }
+
+    private void ToggleStaffStatus(Account staff)
+    {
+        // TODO: Call API here to update the staff's status
+        Console.WriteLine($"Gọi API khóa/mở khóa nhân viên: {staff.Username}...");
+        
+        // Mock toggle
+        var staffInList = staffList.FirstOrDefault(s => s.Id == staff.Id);
+        if (staffInList != null)
+        {
+            staffInList.IsActive = !staffInList.IsActive;
+        }
+    }
+}

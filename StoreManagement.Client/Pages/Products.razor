@@ -1,0 +1,121 @@
+@page "/products"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@layout StoreManagement.Client.Layout.CustomerLayout
+@inject ApiService ApiService
+@inject CartService CartService
+
+<h3>Sản Phẩm</h3>
+
+<div class="mb-3 d-flex">
+    <input class="form-control me-2" placeholder="Tìm kiếm sản phẩm" @bind="searchTerm" @bind:event="oninput" />
+    <button class="btn btn-outline-primary" @onclick="Search">Tìm</button>
+</div>
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (products != null)
+{
+    <div class="row">
+        @foreach (var product in products)
+        {
+            <div class="col-md-4 col-lg-3 mb-4">
+                <div class="card">
+                    <img src="@product.Image" class="card-img-top" alt="@product.Title">
+                    <div class="card-body">
+                        <h5 class="card-title">@product.Title</h5>
+                        <p class="card-text">@product.RetailPrice.ToString("C")</p>
+                        <a class="btn btn-sm btn-secondary me-2" href="/products/@product.Id">Chi tiết</a>
+                        <button class="btn btn-primary" @onclick="() => AddToCart(product)">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Book>? products;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string searchTerm = string.Empty;
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "search")]
+    public string? search { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await ApiService.GetProductsAsync();
+            if (response.Success)
+            {
+                products = response.Data;
+            }
+            else
+            {
+                errorMessage = response.Message ?? "An unknown error occurred.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load products: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            searchTerm = search;
+            await Search();
+        }
+    }
+
+    private async Task Search()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var response = await ApiService.GetProductsAsync();
+                if (response.Success) products = response.Data;
+                else errorMessage = response.Message;
+            }
+            else
+            {
+                var response = await ApiService.SearchProductsAsync(searchTerm);
+                if (response.Success) products = response.Data;
+                else errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddToCart(Book product)
+    {
+        CartService.AddToCart(product);
+    }
+}

@@ -1,0 +1,133 @@
+@page "/accounts"
+@layout StoreManagement.Client.Layout.AdminLayout
+@using StoreManagement.Client.Models
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject IJSRuntime JSRuntime
+
+<style>
+    .am-card { border-radius: 10px; box-shadow: 0 4px 20px rgba(78,115,223,0.06); }
+</style>
+
+@attribute [Authorize(Roles = "ADMIN")]
+
+<h3 class="mt-2 cm-primary">Quản lý Tài khoản (Admin)</h3>
+
+<AuthorizeView Roles="ADMIN">
+    <Authorized Context="auth">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card am-card p-3 mb-3">
+                    <h5>Thông tin tài khoản của bạn</h5>
+                    @if (profile == null)
+                    {
+                        <p>Đang tải...</p>
+                    }
+                    else
+                    {
+                        <dl class="row">
+                            <dt class="col-sm-4">UserName</dt>
+                            <dd class="col-sm-8">@profile.Username</dd>
+
+                            <dt class="col-sm-4">Email</dt>
+                            <dd class="col-sm-8">@profile.Email</dd>
+
+                            <dt class="col-sm-4">Role</dt>
+                            <dd class="col-sm-8">@profile.Role</dd>
+
+                            <dt class="col-sm-4">Id</dt>
+                            <dd class="col-sm-8">@profile.Id</dd>
+                        </dl>
+                    }
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card am-card p-3 mb-3">
+                    <h5>Đăng ký tài khoản mới</h5>
+                    <EditForm Model="createModel" OnValidSubmit="CreateAccount">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-2">
+                            <label class="form-label">UserName</label>
+                            <InputText class="form-control" @bind-Value="createModel.UserName" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Email</label>
+                            <InputText type="email" class="form-control" @bind-Value="createModel.Email" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Password</label>
+                            <InputText type="password" class="form-control" @bind-Value="createModel.Password" />
+                        </div>
+                        <div class="d-grid mt-2">
+                            <button class="btn cm-bg-primary">Tạo tài khoản</button>
+                        </div>
+                    </EditForm>
+
+                    @if (!string.IsNullOrEmpty(createMessage))
+                    {
+                        <div class="mt-2 alert alert-info">@createMessage</div>
+                    }
+
+                    <small class="text-muted">Lưu ý: backend hiện chỉ cấp vai trò mặc định cho tài khoản mới.</small>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>Bạn không có quyền truy cập trang này.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private StoreManagement.Client.Models.UserResponse? profile;
+
+    private CreateUserModel createModel = new();
+    private string? createMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        var res = await ApiService.GetCustomerProfileAsync();
+        if (res.Success && res.Data != null)
+        {
+            profile = res.Data;
+        }
+    }
+
+    private async Task CreateAccount()
+    {
+        createMessage = null;
+        var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn tạo tài khoản mới?\nVai trò mặc định sẽ được áp dụng.");
+        if (!ok) return;
+
+        var res = await ApiService.RegisterUserAsync(createModel.UserName ?? string.Empty, createModel.Email ?? string.Empty, createModel.Password ?? string.Empty);
+        if (res.Success && res.Data != null)
+        {
+            createMessage = "Tạo tài khoản thành công.";
+            createModel = new CreateUserModel();
+        }
+        else
+        {
+            createMessage = res.Message ?? "Tạo tài khoản thất bại.";
+        }
+    }
+
+    private class CreateUserModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? UserName { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string? Email { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(5)]
+        public string? Password { get; set; }
+    }
+}

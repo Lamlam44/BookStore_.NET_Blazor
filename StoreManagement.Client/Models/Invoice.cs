@@ -2,6 +2,7 @@
 {
     public class Invoice : BaseEntity
     {
+        public string CustomerId { get; set; }
         public string CashierStaffId { get; set; } = string.Empty;
         public string? CustomerPhone { get; set; }
         public DateTime PaymentTime { get; set; }

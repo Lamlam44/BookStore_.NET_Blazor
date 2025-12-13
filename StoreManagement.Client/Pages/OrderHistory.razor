@@ -1,0 +1,78 @@
+@page "/orders"
+@inject Services.ApiService ApiService
+@inject Services.CustomAuthenticationStateProvider AuthProvider
+
+<h3>Đơn hàng của tôi</h3>
+
+@if (!isAuthenticated)
+{
+    <div class="alert alert-warning">Bạn cần <a href="/login">đăng nhập</a> để xem lịch sử đặt hàng.</div>
+}
+else if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Mã đơn</th>
+                <th>Ngày</th>
+                <th>Người xử lý</th>
+                <th>Tổng</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var inv in invoices)
+            {
+                <tr>
+                    <td>@inv.Id</td>
+                    <td>@inv.PaymentTime.ToString("g")</td>
+                    <td>@inv.CashierStaff?.Username</td>
+                    <td>@inv.TotalAmount.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = false;
+    private string errorMessage;
+    private List<StoreManagement.Client.Models.Invoice> invoices = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+        if (!isAuthenticated) return;
+
+        isLoading = true;
+        try
+        {
+            var res = await ApiService.GetOrderHistoryAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                invoices = res.Data;
+            }
+            else
+            {
+                errorMessage = res?.Message ?? "Không thể lấy lịch sử đơn hàng";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

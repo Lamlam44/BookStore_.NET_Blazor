@@ -1,4 +1,6 @@
 @page "/inventory"
+@attribute [Authorize(Roles="STAFF, ADMIN")]
+@layout StoreManagement.Client.Layout.AdminLayout
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services
 @inject IStoreService StoreService
@@ -120,9 +122,9 @@
                         {
                             <tr>
                                 <td>
-                                    <img src="@(string.IsNullOrEmpty(book.Image) ? "/images/no-image.png" : book.Image)" 
+                                     <img src="@(string.IsNullOrEmpty(book.Image) ? "/images/no-image.svg" : book.Image)" 
                                          class="book-cover" 
-                                         onerror="this.src='https://via.placeholder.com/50x75?text=No+Img'" />
+                                         onerror="this.src='/images/no-image.svg'" />
                                 </td>
                                 <td>
                                     <span class="book-title">@book.Title</span>

@@ -63,8 +63,6 @@ namespace StoreManagement.Client.Services
             if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
         }
 
-        public async Task DeleteSupplierAsync(string id) => await _http.DeleteAsync($"api/suppliers/{id}");
-
         // ==========================================
         // 2. KHUYẾN MÃI (VOUCHER)
         // ==========================================
@@ -127,13 +125,21 @@ namespace StoreManagement.Client.Services
             }
         }
 
-        public Task<Book?> GetBookByIdAsync(string id) => Task.FromResult<Book?>(null);
+        public async Task<Book?> GetBookByIdAsync(string id) 
+        {
+            try 
+            {
+                var response = await _http.GetFromJsonAsync<ApiResponse<Book>>($"api/products/{id}");
+                return response?.Data;
+            }
+            catch { return null; }
+        }
 
         public async Task<List<Book>> SearchBooksAsync(string keyword)
         {
             try 
             {
-                var url = $"api/products/search?Query={keyword}&PageNumber=1&PageSize=10";
+                var url = $"api/products/search?SearchTerm={System.Net.WebUtility.UrlEncode(keyword)}&PageNumber=1&PageSize=10";
                 var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>(url);
                 return response?.Data?.Items ?? new List<Book>();
             }
@@ -174,9 +180,62 @@ namespace StoreManagement.Client.Services
         public async Task<List<Category>> GetAllCategoriesAsync()
         {
             try {
-                var response = await _http.GetFromJsonAsync<ApiResponse<List<Category>>>("api/categories");
-                return response?.Data ?? new List<Category>();
+                var url = "api/categories?PageNumber=1&PageSize=1000";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Category>>>(url);
+                return response?.Data?.Items ?? new List<Category>();
             } catch { return new List<Category>(); }
+        }
+
+        // ==========================================
+        // 5B. AUTHORS & PUBLISHERS (DROPDOWN DATA)
+        // ==========================================
+        public async Task<List<Author>> GetAllAuthorsAsync()
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Author>>>("api/authors?PageNumber=1&PageSize=1000");
+                return response?.Data?.Items ?? new List<Author>();
+            }
+            catch { return new List<Author>(); }
+        }
+
+        public async Task<List<Publisher>> GetAllPublishersAsync()
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Publisher>>>("api/publishers?PageNumber=1&PageSize=1000");
+                return response?.Data?.Items ?? new List<Publisher>();
+            }
+            catch { return new List<Publisher>(); }
+        }
+
+        // ==========================================
+        // 6. CUSTOMERS (KHÁCH HÀNG)
+        // ==========================================
+        public async Task<List<Customer>> GetCustomersAsync()
+        {
+            try
+            {
+                var url = "api/customers?PageNumber=1&PageSize=1000";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Customer>>>(url);
+                return response?.Data?.Items ?? new List<Customer>();
+            }
+            catch { return new List<Customer>(); }
+        }
+
+        public async Task CreateCustomerAsync(Customer customer)
+        {
+            try
+            {
+                var dto = new { customer.Name, customer.Email, customer.Phone, customer.Address };
+                var response = await _http.PostAsJsonAsync("api/customers", dto);
+                if (!response.IsSuccessStatusCode) 
+                    throw new Exception(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to create customer: {ex.Message}");
+            }
         }
     }
 }

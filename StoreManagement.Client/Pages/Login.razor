@@ -1,0 +1,128 @@
+@page "/login"
+@layout EmptyLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager NavigationManager
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject AuthenticationStateProvider AuthProvider
+
+<div class="container py-5 h-100">
+    <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+            <div class="card shadow-lg border-0" style="border-radius: 1rem;">
+                <div class="card-body p-5 text-center">
+
+                    <h2 class="fw-bold mb-2 text-uppercase text-primary">Đăng Nhập</h2>
+                    <p class="text-muted mb-5">Nhập tên đăng nhập và mật khẩu của bạn!</p>
+
+                    @* Thay OnValidSubmit bằng OnSubmit để bỏ qua kiểm tra hợp lệ *@
+                    <EditForm Model="@loginModel" OnSubmit="HandleLogin">
+                        @* Đã comment dòng kiểm tra lỗi *@
+                        @* <DataAnnotationsValidator /> *@
+
+                        <div class="form-floating mb-4">
+                                <InputText id="email" class="form-control" @bind-Value="loginModel.Email" placeholder="Email" />
+                                    <label for="email">Email</label>
+                            
+                            @* Đã comment thông báo lỗi *@
+                            @* <ValidationMessage For="@(() => loginModel.Username)" /> *@
+                        </div>
+
+                        <div class="form-floating mb-4">
+                            <InputText type="password" id="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Password" />
+                            <label for="password">Mật khẩu</label>
+                            
+                            @* Đã comment thông báo lỗi *@
+                            @* <ValidationMessage For="@(() => loginModel.Password)" /> *@
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger mb-4">@errorMessage</div>
+                        }
+
+                        <button class="btn btn-primary btn-lg w-100 mb-4" type="submit" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span><span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <span>Đăng nhập</span>
+                            }
+                        </button>
+
+                        <hr class="my-4">
+                        <p class="mb-0">Chưa có tài khoản? <a href="customer-register" class="text-primary fw-bold">Đăng ký ngay</a></p>
+                    </EditForm>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private string? errorMessage;
+    private bool isSubmitting = false;
+
+        public class LoginRequest
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    private async Task HandleLogin()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+                var result = await ApiService.LoginAsync(loginModel.Email, loginModel.Password);
+
+                if (result.Success && result.Data != null && !string.IsNullOrWhiteSpace(result.Data.AccessToken))
+            {
+                var customAuthProvider = (StoreManagement.Client.Services.CustomAuthenticationStateProvider)AuthProvider;
+                await customAuthProvider.MarkUserAsAuthenticated(result.Data.AccessToken);
+
+                // Small delay/yield to allow auth state propagation before making an authenticated request / navigating
+                await Task.Delay(100);
+
+                // Fetch profile to determine role
+                var profile = await ApiService.GetCustomerProfileAsync();
+                var role = profile.Data?.Role ?? string.Empty;
+
+                // Compare roles case-insensitively
+                if (string.Equals(role, "ADMIN", System.StringComparison.OrdinalIgnoreCase) || string.Equals(role, "MANAGER", System.StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Administrator", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // Admin landing page uses MainLayout at /admin
+                    NavigationManager.NavigateTo("/admin");
+                }
+                else if (string.Equals(role, "STAFF", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // Staff also land on the admin area/dashboard
+                    NavigationManager.NavigateTo("/admin");
+                }
+                else
+                {
+                    // Customer -> home
+                    NavigationManager.NavigateTo("/");
+                }
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Tên đăng nhập hoặc mật khẩu không đúng.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi hệ thống: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

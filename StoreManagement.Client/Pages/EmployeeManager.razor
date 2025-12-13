@@ -1,0 +1,273 @@
+@layout StoreManagement.Client.Layout.AdminLayout
+@* @page "/employees"
+@using Microsoft.AspNetCore.Components.Forms
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IJSRuntime JSRuntime
+@inject ApiService ApiService
+
+<h3 class="mb-4">Quản lý Nhân viên</h3>
+
+<div class="row mb-3">
+    <div class="col">
+        <button class="btn btn-primary" @onclick="OpenAddEmployeeModal">
+            <i class="bi bi-plus-lg"></i> Thêm nhân viên
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Danh sách Nhân viên</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Họ tên</th>
+                    <th>Ngày sinh</th>
+                    <th>SĐT</th>
+                    <th>Vị trí</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (employees == null)
+                {
+                    <tr><td colspan="8" class="text-center"><i>Đang tải...</i></td></tr>
+                }
+                else if (employees.Count == 0)
+                {
+                    <tr><td colspan="8" class="text-center"><i>Chưa có nhân viên nào.</i></td></tr>
+                }
+                else
+                {
+                    @foreach (var emp in employees)
+                    {
+                        <tr>
+                            <td>@emp.Name</td>
+                            <td>@emp.DateOfBirth?.ToString("dd/MM/yyyy")</td>
+                            <td>@emp.Phone</td>
+                            <td>@emp.Position</td>
+                            <td>@emp.Account.Username</td>
+                            <td><span class="badge bg-info">@emp.Account.Role</span></td>
+                            <td>
+                                <span class="badge @(emp.Account.IsActive ? "bg-success" : "bg-secondary")">
+                                    @(emp.Account.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenEditEmployeeModal(emp)">
+                                    <i class="bi bi-pencil-square"></i> Sửa
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteEmployee(emp)">
+                                    <i class="bi bi-trash"></i> Xóa
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="employeeModalLabel">@modalTitle</h5>
+                <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@currentEmployee" OnSubmit="SaveEmployee">
+                    <DataAnnotationsValidator />
+                    <ul class="nav nav-tabs" id="employeeTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Thông tin</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="account-tab" data-bs-toggle="tab" data-bs-target="#account" type="button" role="tab">Tài khoản</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content border border-top-0 p-3 mb-3" id="employeeTabContent">
+                        <div class="tab-pane fade show active" id="info" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Họ tên</label>
+                                    <InputText class="form-control" @bind-Value="currentEmployee.Name" />
+                                    <ValidationMessage For="@(() => currentEmployee.Name)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Ngày sinh</label>
+                                    <InputDate class="form-control" @bind-Value="currentEmployee.DateOfBirth" />
+                                    <ValidationMessage For="@(() => currentEmployee.DateOfBirth)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Số điện thoại</label>
+                                    <InputText class="form-control" @bind-Value="currentEmployee.Phone" />
+                                    <ValidationMessage For="@(() => currentEmployee.Phone)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Vị trí</label>
+                                    <InputText class="form-control" @bind-Value="currentEmployee.Position" />
+                                    <ValidationMessage For="@(() => currentEmployee.Position)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="account" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tên đăng nhập</label>
+                                    <InputText class="form-control" @bind-Value="currentEmployee.Account.Username" />
+                                    <ValidationMessage For="@(() => currentEmployee.Account.Username)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Mật khẩu</label>
+                                    <InputText type="password" class="form-control" @bind-Value="currentEmployee.Account.Password" />
+                                    <ValidationMessage For="@(() => currentEmployee.Account.Password)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Vai trò</label>
+                                    <InputSelect class="form-select" @bind-Value="currentEmployee.Account.Role">
+                                        @foreach (var role in Enum.GetValues(typeof(EmployeeRole)))
+                                        {
+                                            <option value="@role">@role</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-6 mb-3 align-self-center">
+                                    <div class="form-check mt-4">
+                                        <InputCheckbox class="form-check-input" @bind-Value="currentEmployee.Account.IsActive" id="isActiveCheck" />
+                                        <label class="form-check-label" for="isActiveCheck">Kích hoạt tài khoản</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Employee> employees = new();
+    private Employee currentEmployee = new();
+    private string modalTitle = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        LoadMockEmployees();
+    }
+
+    private void LoadMockEmployees()
+    {
+        employees = new List<Employee>
+        {
+            new Employee
+            {
+                Id = "1", Name = "Admin User", DateOfBirth = new DateTime(1990, 1, 1), Phone = "123456789", Position = "Manager",
+                Account = new EmployeeAccount { Username = "admin", Password = "admin", Role = EmployeeRole.Admin, IsActive = true }
+            },
+            new Employee
+            {
+                Id = "2", Name = "Staff User", DateOfBirth = new DateTime(1995, 5, 5), Phone = "987654321", Position = "Sales",
+                Account = new EmployeeAccount { Username = "staff", Password = "staff", Role = EmployeeRole.Staff, IsActive = true }
+            }
+        };
+    }
+
+    private async Task OpenAddEmployeeModal()
+    {
+        currentEmployee = new Employee();
+        // Khởi tạo sẵn account để tránh lỗi null khi binding
+        currentEmployee.Account = new EmployeeAccount { Role = EmployeeRole.Staff, IsActive = true };
+        modalTitle = "Thêm nhân viên mới";
+        await OpenModal();
+    }
+
+    private async Task OpenEditEmployeeModal(Employee employee)
+    {
+        // Clone dữ liệu để binding không ảnh hưởng trực tiếp đến list
+        currentEmployee = new Employee {
+            Id = employee.Id,
+            Name = employee.Name,
+            DateOfBirth = employee.DateOfBirth,
+            Phone = employee.Phone,
+            Position = employee.Position,
+            Account = new EmployeeAccount
+            {
+                Username = employee.Account.Username,
+                Password = "", // Để trống password khi sửa
+                Role = employee.Account.Role,
+                IsActive = employee.Account.IsActive
+            }
+        };
+        modalTitle = $"Sửa: {employee.Name}";
+        await OpenModal();
+    }
+
+    private async Task SaveEmployee()
+    {
+        var empToSave = new Employee
+        {
+            Id = currentEmployee.Id,
+            Name = currentEmployee.Name,
+            DateOfBirth = currentEmployee.DateOfBirth,
+            Phone = currentEmployee.Phone,
+            Position = currentEmployee.Position,
+            Account = new EmployeeAccount 
+            { 
+                Username = currentEmployee.Account.Username,
+                Password = currentEmployee.Account.Password,
+                Role = currentEmployee.Account.Role,
+                IsActive = currentEmployee.Account.IsActive
+            }
+        };
+
+        if (string.IsNullOrEmpty(empToSave.Id))
+        {
+            // Thêm mới
+            empToSave.Id = Guid.NewGuid().ToString();
+            employees.Add(empToSave);
+        }
+        else
+        {
+            // Sửa
+            var index = employees.FindIndex(e => e.Id == empToSave.Id);
+            if (index != -1)
+            {
+                employees[index] = empToSave;
+            }
+        }
+        
+        // OnSubmit của EditForm sẽ tự động gọi StateHasChanged sau khi hàm này hoàn tất.
+        await CloseModal();
+    }
+
+    private void DeleteEmployee(Employee employee)
+    {
+        employees.Remove(employee);
+        // Với @onclick thông thường, chúng ta cần gọi StateHasChanged() thủ công để báo cho Blazor biết UI cần được vẽ lại.
+        StateHasChanged();
+    }
+
+    // --- JS INTEROP ---
+    private async Task OpenModal()
+    {
+        await JSRuntime.InvokeVoidAsync("showModal", "employeeModal");
+    }
+
+    private async Task CloseModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", "employeeModal");
+    }
+} *@

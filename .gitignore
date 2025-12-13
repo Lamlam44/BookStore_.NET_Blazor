@@ -1,84 +1,64 @@
-/project_store_management_backend# Build
-bin/
-obj/
+## --- 1. CORE BUILD (Không thể thiếu cho .NET/Blazor) ---
+[Bb]in/
+[Oo]bj/
 
-# User files
-*.user
-*.suo
+## --- 2. VISUAL STUDIO & TOOLS (Cấu hình máy cá nhân) ---
 .vs/
 .vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-# Logs
-*.log
-logs/
-
-# NuGet
+## --- 3. DEPENDENCIES & NUGET (Phần bị thiếu lúc nãy) ---
+# Các gói thư viện tải về
 packages/
 *.nupkg
 *.snupkg
+# File khóa phiên bản (đôi khi gây conflict nếu làm team)
 project.lock.json
+project.fragment.lock.json
+artifacts/
 
-# OS
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-.DS_Store
-
-# Publish output
-publish/
-wwwroot/dist/
-wwwroot/build/
-
-# Blazor auto-generated
+## --- 4. BLAZOR SPECIFIC (Dành riêng cho Frontend của bạn) ---
+# File framework tự sinh
 wwwroot/_framework/
+# File nén
 wwwroot/*.gz
 wwwroot/*.br
+*.br
+*.gz
+# Thư viện JS nếu có dùng
+node_modules/
 
-# Secrets
-appsettings.Development.json
-*.pfx
-*.key
-*.pem
-.env
-# Build
-bin/
-obj/
+## --- 5. PUBLISH & DEPLOY (Phần bị thiếu lúc nãy) ---
+# Quan trọng khi bạn build ra file để nộp đồ án
+**/Properties/PublishProfiles/
+publish/
+web.config
 
-# User files
-*.user
-*.suo
-.vs/
-.vscode/
-
-# Logs
+## --- 6. LOGS & DIAGNOSTICS (Phần bị thiếu lúc nãy) ---
 *.log
 logs/
+TestResults/
 
-# NuGet
-packages/
-*.nupkg
-*.snupkg
-project.lock.json
-
-# OS
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+## --- 7. OS FILES (File rác hệ điều hành) ---
 .DS_Store
+Thumbs.db
+Desktop.ini
 
-# Publish output
-publish/
-wwwroot/dist/
-wwwroot/build/
-
-# Blazor auto-generated
-wwwroot/_framework/
-wwwroot/*.gz
-wwwroot/*.br
-
-# Secrets
+## --- 8. SECRETS (Bảo mật) ---
 appsettings.Development.json
+appsettings.Local.json
+.env
 *.pfx
 *.key
-*.pem
-.env
+
+## --- 9. OTHERS (Các file khác không cần thiết) ---
+project_store_management
+web-manage-store-frontend
+
+web-manage-store-frontend\node_modules
+web-manage-store-frontend\package-lock.json
+web-manage-store-frontend\dist
+web-manage-store-frontend\build
