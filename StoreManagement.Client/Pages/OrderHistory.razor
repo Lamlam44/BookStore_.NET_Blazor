@@ -44,7 +44,7 @@ else
 @code {
     private bool isAuthenticated = false;
     private bool isLoading = false;
-    private string errorMessage;
+    private string errorMessage = string.Empty;
     private List<StoreManagement.Client.Models.Invoice> invoices = new();
 
     protected override async Task OnInitializedAsync()

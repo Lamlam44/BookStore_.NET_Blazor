@@ -114,11 +114,11 @@ else
             AmountPaid = totalAmount,
             DiscountAmount = 0,
             VoucherId = null,
-            Details = cartItems.Select(i => new Models.CreateInvoiceDetailRequest
+            Details = cartItems.Select(i => new Models.InvoiceDetailDto
             {
                 BookId = i.ProductId,
                 Quantity = i.Quantity,
-                UnitPrice = i.Price
+                TotalDiscount = 0
             }).ToList()
         };
 
@@ -145,7 +145,7 @@ else
 
             // Authenticated: call backend to persist invoice
             var res = await ApiService.CreateOrderAsync(request);
-            if (res != null && res.Success)
+            if (res != null && res.Success && res.Data != null)
             {
                 CartService.Clear();
                 Navigation.NavigateTo($"/orders/{res.Data.Id}");

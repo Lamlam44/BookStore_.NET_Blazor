@@ -46,6 +46,11 @@
         @* Shared menu for Staff and Admin (common links) *@
         <AuthorizeView Roles="STAFF,ADMIN">
             <div class="nav-item px-3">
+                <NavLink class="nav-link" href="pos">
+                    <span class="bi bi-cart-check-fill" aria-hidden="true"></span> POS
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
                 <NavLink class="nav-link" href="timekeeping">
                     <span class="bi bi-clock-history" aria-hidden="true"></span> Chấm công
                 </NavLink>

@@ -23,6 +23,7 @@ namespace StoreManagement.Client.Services
         Task CreateVoucherAsync(Voucher voucher);
         Task UpdateVoucherAsync(Voucher voucher);
         Task DeleteVoucherAsync(string id);
+        Task<Voucher?> SearchVoucherByCodeAsync(string code);
 
         // Categories
         Task<List<Category>> GetAllCategoriesAsync();
@@ -31,11 +32,30 @@ namespace StoreManagement.Client.Services
         Task<List<Author>> GetAllAuthorsAsync();
         Task<List<Publisher>> GetAllPublishersAsync();
 
-        // Customers
-        Task<List<Customer>> GetCustomersAsync();
-        Task CreateCustomerAsync(Customer customer);
+                // Customers
 
-        // Inventory
-        Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
-    }
-}
+                Task<List<Customer>> GetCustomersAsync();
+
+                Task CreateCustomerAsync(Customer customer);
+
+                Task<List<Customer>> SearchCustomersAsync(string keyword);
+
+        
+
+        
+
+                // Inventory
+
+                Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
+
+        
+
+                //Invoice
+
+                Task<Invoice?> CreateInvoiceAsync(CreateInvoiceRequest request);
+
+            }
+
+        }
+
+        
