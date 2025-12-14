@@ -1,0 +1,270 @@
+@page "/admin/invoices"
+@layout AdminLayout
+@inject ApiService ApiService
+@inject NavigationManager Navigation
+
+<h3 class="mb-4">Quản lý Hóa đơn</h3>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/admin/invoices/create-online" class="btn btn-primary">Tạo Hóa đơn Trực tuyến</a>
+    <div>
+        <label for="pageSize" class="me-2">Số mục/trang:</label>
+        <select id="pageSize" @bind="pageSize" class="form-select d-inline-block w-auto">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+        </select>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (invoices == null || !invoices.Any())
+{
+    <div class="alert alert-info">Không có hóa đơn nào được tìm thấy.</div>
+}
+else
+{
+    <table class="table table-hover table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Loại</th>
+                <th>Tổng cộng</th>
+                <th>Giảm giá</th>
+                <th>Tổng cuối</th>
+                <th>Trạng thái</th>
+                <th>PTTT</th>
+                <th>TT Thanh toán</th>
+                <th>Ngày tạo</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var invoice in invoices)
+            {
+                <tr>
+                    <td>@invoice.Id</td>
+                    <td>@invoice.OrderType</td>
+                    <td>@invoice.Subtotal.ToString("C")</td>
+                    <td>@invoice.TotalDiscount.ToString("C")</td>
+                    <td>@invoice.FinalAmount.ToString("C")</td>
+                    <td><span class="badge @GetStatusBadgeClass(invoice.Status)">@invoice.Status</span></td>
+                    <td>@invoice.PaymentMethod</td>
+                    <td><span class="badge @GetStatusBadgeClass(invoice.PaymentStatus)">@invoice.PaymentStatus</span></td>
+                    <td>@invoice.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="/admin/invoices/detail/@invoice.Id" class="btn btn-sm btn-info" title="Chi tiết">
+                                <i class="oi oi-eye"></i>
+                            </a>
+                            <a href="/admin/invoices/edit/@invoice.Id" class="btn btn-sm btn-warning" title="Sửa">
+                                <i class="oi oi-pencil"></i>
+                            </a>
+                            <button @onclick="(() => OpenUpdateStatusModal(invoice.Id, invoice.Status, invoice.PaymentStatus))" class="btn btn-sm btn-secondary" title="Cập nhật Trạng thái">
+                                <i class="oi oi-arrow-circle-top"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <button class="page-link" @onclick="(() => ChangePage(currentPage - 1))">Trước</button>
+            </li>
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <button class="page-link" @onclick="(() => ChangePage(i))">@i</button>
+                </li>
+            }
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <button class="page-link" @onclick="(() => ChangePage(currentPage + 1))">Sau</button>
+            </li>
+        </ul>
+    </nav>
+}
+
+@* Update Status Modal *@
+@if (showUpdateStatusModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cập nhật Trạng thái Hóa đơn</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUpdateStatusModal"></button>
+                </div>
+                <EditForm Model="updateStatusRequest" OnValidSubmit="HandleUpdateStatusSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Trạng thái Hóa đơn</label>
+                            <InputSelect @bind-Value="updateStatusRequest.Status" class="form-select" id="status">
+                                <option value="">Chọn trạng thái</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Processing">Processing</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => updateStatusRequest.Status)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="paymentStatus" class="form-label">Trạng thái Thanh toán</label>
+                            <InputSelect @bind-Value="updateStatusRequest.PaymentStatus" class="form-select" id="paymentStatus">
+                                <option value="">Chọn trạng thái thanh toán</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Refunded">Refunded</option>
+                                <option value="Failed">Failed</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => updateStatusRequest.PaymentStatus)" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(updateStatusErrorMessage))
+                        {
+                            <div class="alert alert-danger mt-3">@updateStatusErrorMessage</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseUpdateStatusModal">Đóng</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isUpdatingStatus">
+                            @if (isUpdatingStatus)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Cập nhật
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<AdminInvoiceResponse>? invoices;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    private int currentPage = 1;
+    private int totalPages = 1;
+    private int totalCount = 0;
+    private int pageSize = 10;
+
+    // For Update Status Modal
+    private bool showUpdateStatusModal = false;
+    private string currentInvoiceIdForStatusUpdate = string.Empty;
+    private AdminUpdateStatusInvoiceRequest updateStatusRequest = new();
+    private bool isUpdatingStatus = false;
+    private string updateStatusErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoicesAsync();
+    }
+
+    private async Task LoadInvoicesAsync()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        try
+        {
+            var result = await ApiService.GetAdminInvoicesAsync(currentPage, pageSize);
+            if (result.Success && result.Data != null)
+            {
+                invoices = result.Data.Items;
+                totalCount = result.Data.TotalRecords;
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Không thể tải danh sách hóa đơn.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi tải hóa đơn: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        await LoadInvoicesAsync();
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Completed" or "Paid" => "bg-success",
+            "Processing" or "Pending" => "bg-warning text-dark",
+            "Cancelled" or "Failed" => "bg-danger",
+            "Refunded" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private void OpenUpdateStatusModal(string invoiceId, string currentStatus, string currentPaymentStatus)
+    {
+        currentInvoiceIdForStatusUpdate = invoiceId;
+        updateStatusRequest.Status = currentStatus;
+        updateStatusRequest.PaymentStatus = currentPaymentStatus;
+        updateStatusErrorMessage = string.Empty;
+        showUpdateStatusModal = true;
+    }
+
+    private void CloseUpdateStatusModal()
+    {
+        showUpdateStatusModal = false;
+        currentInvoiceIdForStatusUpdate = string.Empty;
+        updateStatusRequest = new();
+    }
+
+    private async Task HandleUpdateStatusSubmit()
+    {
+        isUpdatingStatus = true;
+        updateStatusErrorMessage = string.Empty;
+        try
+        {
+            var result = await ApiService.UpdateAdminInvoiceStatusAsync(currentInvoiceIdForStatusUpdate, updateStatusRequest);
+            if (result.Success)
+            {
+                CloseUpdateStatusModal();
+                await LoadInvoicesAsync(); // Reload the list to show updated status
+            }
+            else
+            {
+                updateStatusErrorMessage = result.Message ?? "Cập nhật trạng thái hóa đơn thất bại.";
+            }
+        }
+        catch (Exception ex)
+        {
+            updateStatusErrorMessage = $"Lỗi: {ex.Message}";
+        }
+        finally
+        {
+            isUpdatingStatus = false;
+        }
+    }
+}

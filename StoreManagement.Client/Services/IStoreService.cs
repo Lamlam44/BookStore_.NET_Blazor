@@ -29,6 +29,7 @@ namespace StoreManagement.Client.Services
         // ==========================================
         Task<List<Voucher>> GetVouchersAsync();
         Task<Voucher?> GetVoucherByIdAsync(string id);
+        Task<Voucher?> SearchVoucherByCodeAsync(string code);
         Task CreateVoucherAsync(Voucher voucher);
         Task UpdateVoucherAsync(Voucher voucher);
         Task DeleteVoucherAsync(string id);
@@ -63,8 +64,7 @@ namespace StoreManagement.Client.Services
         // ==========================================
         Task<List<Customer>> GetCustomersAsync();
         Task CreateCustomerAsync(Customer customer);
-        
-        // Overload hỗ trợ phân trang & tạo nhanh (nếu code cũ cần)
+        Task<List<Customer>> SearchCustomersAsync(string keyword);        
         Task<ApiResponse<PaginationResponse<Customer>>> GetCustomersAsync(int pageNumber, int pageSize);
         Task<ApiResponse<bool>> CreateCustomerAsync(string name, string phone, string address);
 
@@ -72,6 +72,17 @@ namespace StoreManagement.Client.Services
         // 8. KHO HÀNG & HÓA ĐƠN (INVENTORY & DASHBOARD)
         // ==========================================
         Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
+        Task<Invoice?> CreateInvoiceAsync(CreateInvoiceRequest request); 
         Task<List<Invoice>> GetInvoicesAsync(); // Dùng cho Dashboard
+
+        Task<ApiResponse<Invoice>> GetInvoiceByIdAsync(string id);
+
+        Task<Invoice?> GetOrderByIdAsync(string id);
+        Task<bool> CreateOrderAsync(Invoice order);
+
+        // ==========================================
+        // 9. NGƯỜI DÙNG (SYSTEM USER)
+        // ==========================================
+        Task<UserResponse?> GetUserProfileAsync();
     }
 }

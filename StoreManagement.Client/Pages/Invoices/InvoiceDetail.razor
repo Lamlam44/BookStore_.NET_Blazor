@@ -1,0 +1,180 @@
+@page "/admin/invoices/detail/{Id}"
+@layout AdminLayout
+@inject StoreManagement.Client.Services.ApiService ApiService
+@inject NavigationManager Navigation
+
+<h3 class="mb-4">Chi tiết Hóa đơn</h3>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <button @onclick='() => Navigation.NavigateTo("/admin/invoices")' class="btn btn-secondary mt-3">Quay lại Danh sách Hóa đơn</button>
+}
+else if (invoice == null)
+{
+    <div class="alert alert-info">Không tìm thấy chi tiết hóa đơn.</div>
+    <button @onclick='() => Navigation.NavigateTo("/admin/invoices")' class="btn btn-secondary mt-3">Quay lại Danh sách Hóa đơn</button>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Hóa đơn #@invoice.Id</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <p><strong>Loại đơn hàng:</strong> @invoice.OrderType</p>
+                    <p><strong>Ngày tạo:</strong> @invoice.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                    <p><strong>Ngày cập nhật:</strong> @invoice.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                    <p><strong>Trạng thái:</strong> <span class="badge @GetStatusBadgeClass(invoice.Status)">@invoice.Status</span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Phương thức thanh toán:</strong> @invoice.PaymentMethod</p>
+                    <p><strong>Trạng thái thanh toán:</strong> <span class="badge @GetStatusBadgeClass(invoice.PaymentStatus)">@invoice.PaymentStatus</span></p>
+                    <p><strong>Thời gian thanh toán:</strong> @(invoice.PaymentTime?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "N/A")</p>
+                    <p><strong>Ghi chú thanh toán:</strong> @(string.IsNullOrWhiteSpace(invoice.PaymentNote) ? "Không" : invoice.PaymentNote)</p>
+                </div>
+            </div>
+
+            <hr />
+
+            <h6>Thông tin Khách hàng</h6>
+            @if (invoice.Customer != null)
+            {
+                <p><strong>Tên khách hàng:</strong> @invoice.Customer.Name</p>
+                <p><strong>Email:</strong> @invoice.Customer.Email</p>
+                <p><strong>Điện thoại:</strong> @invoice.Customer.Phone</p>
+            }
+            else
+            {
+                <p>Không có thông tin khách hàng.</p>
+            }
+
+            <hr />
+
+            <h6>Thông tin Nhân viên</h6>
+            @if (invoice.Staff != null)
+            {
+                <p><strong>Tên nhân viên:</strong> @invoice.Staff.Username</p>
+                <p><strong>Chức vụ:</strong> @invoice.Staff.PositionName</p>
+            }
+            else
+            {
+                <p>Không có thông tin nhân viên.</p>
+            }
+
+            <hr />
+
+            <h6>Chi tiết Sản phẩm</h6>
+            <table class="table table-bordered table-striped mt-3">
+                <thead class="table-light">
+                    <tr>
+                        <th>Sách</th>
+                        <th>Số lượng</th>
+                        <th>Đơn giá</th>
+                        <th>Giảm giá</th>
+                        <th>Tổng cộng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in invoice.Details)
+                    {
+                        <tr>
+                            <td>@item.BookTitle</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.UnitPrice.ToString("C")</td>
+                            <td>@item.TotalDiscount.ToString("C")</td>
+                            <td>@item.FinalPrice.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" class="text-end">Tổng phụ:</th>
+                        <th>@invoice.Subtotal.ToString("C")</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-end">Tổng giảm giá:</th>
+                        <th>@invoice.TotalDiscount.ToString("C")</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-end">Tổng cuối cùng:</th>
+                        <th>@invoice.FinalAmount.ToString("C")</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-end">Số tiền đã thanh toán:</th>
+                        <th>@invoice.AmountPaid.ToString("C")</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-end">Tiền thừa:</th>
+                        <th>@invoice.ChangeDue.ToString("C")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="card-footer text-end">
+            <button @onclick='() => Navigation.NavigateTo($"/admin/invoices/edit/{invoice.Id}")' class="btn btn-warning me-2">Sửa Hóa đơn</button>
+            <button @onclick='() => Navigation.NavigateTo("/admin/invoices")' class="btn btn-secondary">Quay lại Danh sách Hóa đơn</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private AdminInvoiceDetailResponse? invoice;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoiceDetailsAsync();
+    }
+
+    private async Task LoadInvoiceDetailsAsync()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        try
+        {
+            var result = await ApiService.GetAdminInvoiceByIdAsync(Id);
+            if (result.Success && result.Data != null)
+            {
+                invoice = result.Data;
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Không thể tải chi tiết hóa đơn.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi tải chi tiết hóa đơn: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Completed" or "Paid" => "bg-success",
+            "Processing" or "Pending" => "bg-warning text-dark",
+            "Cancelled" or "Failed" => "bg-danger",
+            "Refunded" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+}

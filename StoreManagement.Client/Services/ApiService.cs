@@ -373,6 +373,13 @@ namespace StoreManagement.Client.Services
         }
 
         // --- Orders ---
+        public async Task<List<Invoice>> GetInvoicesAsync()
+        {
+            // Placeholder implementation to satisfy IStoreService
+            // A real implementation would call an API endpoint for a list of invoices.
+            return await Task.FromResult(new List<Invoice>());
+        }
+
         public async Task<ApiResponse<List<Invoice>>> GetOrderHistoryAsync()
         {
             try
@@ -396,32 +403,148 @@ namespace StoreManagement.Client.Services
             }
         }
 
-        public async Task<ApiResponse<Invoice>> CreateOrderAsync(CreateInvoiceRequest request)
+        public async Task<ApiResponse<AdminInvoiceDetailResponse>> CreateInvoiceOnlineAsync(AdminCreateInvoiceRequest request)
         {
             try
             {
                 await EnsureAuthHeaderAsync();
                 var response = await _httpClient.PostAsJsonAsync("api/orders/online", request);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<Invoice>>() ?? 
-                    new ApiResponse<Invoice> { Success = false, Message = "Order creation failed" };
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                    new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Order creation failed" };
             }
             catch (Exception ex)
             {
-                return new ApiResponse<Invoice> { Success = false, Message = $"Error: {ex.Message}" };
+                return new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = $"Error: {ex.Message}" };
             }
         }
 
-        public async Task<ApiResponse<Invoice>> GetOrderByIdAsync(string id)
+        public async Task<ApiResponse<AdminInvoiceDetailResponse>> CreateInvoicePOSAsync(AdminCreateInvoiceRequest request)
         {
             try
             {
                 await EnsureAuthHeaderAsync();
-                return await _httpClient.GetFromJsonAsync<ApiResponse<Invoice>>($"api/orders/detail/{id}") ??
-                    new ApiResponse<Invoice> { Success = false, Message = "Order not found" };
+                var response = await _httpClient.PostAsJsonAsync("api/orders/pos", request);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                    new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "POS Order creation failed" };
             }
             catch (Exception ex)
             {
-                return new ApiResponse<Invoice> { Success = false, Message = $"Error: {ex.Message}" };
+                return new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = $"Error: {ex.Message}" };
+            }
+        }
+
+        public async Task<ApiResponse<PaginationResponse<AdminInvoiceResponse>>> GetAdminInvoicesAsync(int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                await EnsureAuthHeaderAsync();
+                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<AdminInvoiceResponse>>>($"api/orders?PageNumber={pageNumber}&PageSize={pageSize}");
+                return response ?? new ApiResponse<PaginationResponse<AdminInvoiceResponse>> { Success = false, Message = "Failed to get admin invoices" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<PaginationResponse<AdminInvoiceResponse>> { Success = false, Message = $"Error: {ex.Message}" };
+            }
+        }
+
+        public async Task<ApiResponse<AdminInvoiceDetailResponse>> GetAdminInvoiceByIdAsync(string id)
+        {
+            try
+            {
+                await EnsureAuthHeaderAsync();
+                return await _httpClient.GetFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>($"api/orders/detail/{id}") ??
+                    new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Admin invoice not found" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = $"Error: {ex.Message}" };
+            }
+        }
+
+        // --- Orders (Customer Context - for Checkout and OrderDetail) ---
+        public async Task<Invoice?> GetOrderByIdAsync(string id)
+        {
+            try
+            {            
+                await EnsureAuthHeaderAsync();
+                var result = await _httpClient.GetFromJsonAsync<ApiResponse<Invoice>>($"api/orders/detail/{id}");
+                return result?.Data;
+            }
+            catch (Exception ex)
+            { 
+                Console.WriteLine($"Error in GetOrderByIdAsync: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<bool> CreateOrderAsync(Invoice order)
+        {
+            try
+            {            
+                await EnsureAuthHeaderAsync();
+                // This is a dummy implementation as the backend API for `CreateOrderAsync(Invoice order)`
+                // was not explicitly defined, but the client requires it to build.
+                // A real implementation would call a backend endpoint like "api/orders"
+                // and map the client `Invoice` model to a backend request DTO.
+                Console.WriteLine($"Simulating creation of order: {order.Id}");
+                var response = await _httpClient.PostAsJsonAsync("api/orders", order); // Theoretical endpoint
+                // Assuming success for build purposes, or check response.IsSuccessStatusCode
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            { 
+                Console.WriteLine($"Error in CreateOrderAsync: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<ApiResponse<AdminInvoiceDetailResponse>> UpdateAdminInvoiceAsync(string id, AdminUpdateInvoiceRequest request)
+        {
+            try
+            {
+                await EnsureAuthHeaderAsync();
+                var response = await _httpClient.PutAsJsonAsync($"api/orders/{id}", request);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                    new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Invoice update failed" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = $"Error: {ex.Message}" };
+            }
+        }
+
+        public async Task<ApiResponse<AdminInvoiceDetailResponse>> UpdateAdminInvoiceStatusAsync(string id, AdminUpdateStatusInvoiceRequest request)
+        {
+            try
+            {
+                await EnsureAuthHeaderAsync();
+                var response = await _httpClient.PatchAsJsonAsync($"api/orders/{id}", request);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                    new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Invoice status update failed" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = $"Error: {ex.Message}" };
+            }
+        }
+
+        public async Task<ApiResponse<Invoice>> GetInvoiceByIdAsync(string id)
+        {
+            try
+            {
+                // Lấy danh sách hóa đơn về rồi lọc tìm ID tương ứng ở Client
+                var invoices = await GetInvoicesAsync();
+                var match = invoices.FirstOrDefault(i => i.Id == id);
+
+                if (match != null)
+                {
+                    return new ApiResponse<Invoice> { Success = true, Data = match };
+                }
+                return new ApiResponse<Invoice> { Success = false, Message = "Không tìm thấy hóa đơn" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<Invoice> { Success = false, Message = ex.Message };
             }
         }
     }

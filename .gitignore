@@ -56,7 +56,6 @@ appsettings.Local.json
 
 ## --- 9. OTHERS (Các file khác không cần thiết) ---
 project_store_management
-web-manage-store-frontend
 
 web-manage-store-frontend\node_modules
 web-manage-store-frontend\package-lock.json

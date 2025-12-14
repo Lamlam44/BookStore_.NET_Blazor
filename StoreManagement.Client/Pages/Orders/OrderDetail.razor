@@ -54,14 +54,14 @@ else if (invoice != null)
     {
         try
         {
-            var res = await ApiService.GetOrderByIdAsync(Id);
-            if (res?.Success == true && res.Data != null)
+            var fetchedInvoice = await ApiService.GetOrderByIdAsync(Id);
+            if (fetchedInvoice != null)
             {
-                invoice = res.Data;
+                invoice = fetchedInvoice;
             }
             else
             {
-                errorMessage = res?.Message ?? "Không tìm thấy đơn hàng";
+                errorMessage = "Không tìm thấy đơn hàng";
             }
         }
         catch (Exception ex)
