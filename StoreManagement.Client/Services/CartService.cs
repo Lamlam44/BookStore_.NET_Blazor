@@ -11,8 +11,6 @@ namespace StoreManagement.Client.Services
 
         public event Action? OnChange;
 
-        public IReadOnlyList<CartItem> GetCartItems() => _items.AsReadOnly();
-
         public void AddToCart(Book book)
         {
             var existingItem = _items.FirstOrDefault(i => i.ProductId == book.Id);
@@ -35,6 +33,8 @@ namespace StoreManagement.Client.Services
 
             NotifyStateChanged();
         }
+        
+        public IReadOnlyList<CartItem> GetCartItems() => _items.AsReadOnly();
 
         public void RemoveFromCart(string productId)
         {

@@ -44,7 +44,7 @@ else if (invoice != null)
 
 @code {
     [Parameter]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     private bool isLoading = true;
     private string? errorMessage;
