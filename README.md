@@ -1,6 +1,6 @@
 ## 📂 Hướng dẫn Cấu trúc Thư mục Frontend (StoreManagement.Client)
 
-Để đảm bảo dự án gọn gàng và dễ bảo trì, vui lòng tuân thủ quy tắc đặt file vào đúng thư mục sau:
+cd vào thưu mục StoreManagement.Client và chạy lệnh dotnet để chạy web blazor
 
 | Thư mục / File | Mô tả & Quy tắc sử dụng |
 | :--- | :--- |
