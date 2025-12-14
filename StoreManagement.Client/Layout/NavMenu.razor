@@ -1,67 +1,93 @@
 ﻿@inject NavigationManager NavigationManager
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Book Store</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
-
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Trang Chủ
+    <nav class="flex-column pt-3">
+        
+        @* --- DASHBOARD --- *@
+        <div class="nav-item px-3 mb-2">
+            <NavLink class="nav-link rounded-3" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-speedometer2 me-3" aria-hidden="true"></span> Dashboard
             </NavLink>
         </div>
 
-        @* Customer pages are handled in the CustomerLayout header/menu. Admin sidebar keeps management links only. *@
-
-        @* Admin only menu (admin-specific links) *@
         <AuthorizeView Roles="ADMIN">
+            @* --- NHÓM QUẢN TRỊ --- *@
+            <div class="nav-header text-white-50 small fw-bold px-4 mt-3 mb-1">QUẢN TRỊ</div>
+            
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="customers">
-                    <span class="bi bi-person-lines-fill" aria-hidden="true"></span> Quản lý Khách hàng
+                <NavLink class="nav-link rounded-3" href="customers">
+                    <span class="bi bi-people-fill me-3" aria-hidden="true"></span> Khách hàng
                 </NavLink>
             </div>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="receipts/create">
-                    <span class="bi bi-box-seam-fill" aria-hidden="true"></span> Nhập Hàng
+                <NavLink class="nav-link rounded-3" href="suppliers">
+                    <span class="bi bi-truck me-3" aria-hidden="true"></span> Nhà cung cấp
+                </NavLink>
+            </div>
+
+            @* --- NHÓM SẢN PHẨM (Đã gom gọn) --- *@
+            <div class="nav-header text-white-50 small fw-bold px-4 mt-3 mb-1">KHO SÁCH</div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link rounded-3" href="productlist">
+                    <span class="bi bi-book-fill me-3" aria-hidden="true"></span> Tất cả Sách
+                </NavLink>
+            </div>
+            @* Các mục danh mục con thụt vào trong 1 chút cho dễ nhìn *@
+            <div class="ms-2">
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link rounded-3 py-1 text-white-50" href="categories">
+                        <span class="bi bi-tags me-3" aria-hidden="true"></span> Danh mục
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link rounded-3 py-1 text-white-50" href="authors">
+                        <span class="bi bi-pen me-3" aria-hidden="true"></span> Tác giả
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link rounded-3 py-1 text-white-50" href="publishers">
+                        <span class="bi bi-building me-3" aria-hidden="true"></span> NXB
+                    </NavLink>
+                </div>
+            </div>
+
+            @* --- NHÓM KINH DOANH --- *@
+            <div class="nav-header text-white-50 small fw-bold px-4 mt-3 mb-1">KINH DOANH</div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link rounded-3" href="receipts/create">
+                    <span class="bi bi-box-arrow-in-down me-3" aria-hidden="true"></span> Nhập hàng
                 </NavLink>
             </div>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="suppliers">
-                    <span class="bi bi-truck" aria-hidden="true"></span> Nhà Cung Cấp
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="vouchers">
-                    <span class="bi bi-ticket-perforated-fill" aria-hidden="true"></span> Khuyến Mãi
+                <NavLink class="nav-link rounded-3" href="vouchers">
+                    <span class="bi bi-ticket-perforated-fill me-3" aria-hidden="true"></span> Khuyến mãi
                 </NavLink>
             </div>
         </AuthorizeView>
 
-        @* Shared menu for Staff and Admin (common links) *@
+        @* --- KHU VỰC NHÂN VIÊN --- *@
         <AuthorizeView Roles="STAFF,ADMIN">
+            <div class="nav-header text-white-50 small fw-bold px-4 mt-3 mb-1">CÁ NHÂN</div>
+            
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="timekeeping">
-                    <span class="bi bi-clock-history" aria-hidden="true"></span> Chấm công
+                <NavLink class="nav-link rounded-3" href="inventory">
+                    <span class="bi bi-boxes me-3" aria-hidden="true"></span> Kiểm kho
                 </NavLink>
             </div>
             <div class="nav-item px-3">
-                <NavLink class="nav-link" href="inventory">
-                    <span class="bi bi-book-half" aria-hidden="true"></span> Kho Sách
+                <NavLink class="nav-link rounded-3" href="timekeeping">
+                    <span class="bi bi-calendar-check me-3" aria-hidden="true"></span> Chấm công
                 </NavLink>
             </div>
         </AuthorizeView>
+
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
-
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()

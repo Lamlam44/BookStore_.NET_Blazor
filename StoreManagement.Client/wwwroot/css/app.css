@@ -107,3 +107,33 @@ a:hover, .btn-link:hover {
     .blazor-error-boundary::after {
         content: "An error has occurred."
     }
+/* Sidebar Nav Styles */
+.nav-scrollable {
+    background: linear-gradient(180deg, #1a2035 0%, #252b42 100%); /* Màu nền tối sang trọng */
+}
+
+.nav-item .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.2s ease-in-out;
+    margin-bottom: 2px;
+}
+
+.nav-item .nav-link:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px); /* Hiệu ứng đẩy nhẹ sang phải khi di chuột */
+}
+
+.nav-item .nav-link.active {
+    background-color: rgba(78, 115, 223, 0.2); /* Màu xanh nhạt nền active */
+    color: #4e73df; /* Màu chữ active */
+    font-weight: bold;
+    border-left: 4px solid #4e73df; /* Viền trái điểm nhấn */
+    border-radius: 0 8px 8px 0 !important; /* Bo góc phải */
+}
+
+.nav-header {
+    letter-spacing: 1px;
+    font-size: 0.7rem;
+    opacity: 0.6;
+}

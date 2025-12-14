@@ -1,0 +1,154 @@
+@page "/authors"
+@layout StoreManagement.Client.Layout.AdminLayout
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+@inject IJSRuntime JSRuntime
+
+<style>
+    :root { --primary: #4e73df; --bg-light: #f8f9fc; }
+    body { background-color: var(--bg-light); }
+    .custom-card { border: none; border-radius: 12px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); background: white; }
+    .table thead th { background-color: #f8f9fc; color: #4e73df; border-bottom: 2px solid #e3e6f0; }
+    
+    .modal-backdrop-custom { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .modal-content-custom { background: white; border-radius: 15px; width: 90%; max-width: 500px; animation: slideDown 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .modal-header-custom { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); color: white; padding: 15px 20px; border-radius: 15px 15px 0 0; display: flex; justify-content: space-between; align-items: center; }
+    @@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { opacity: 1; transform: translateY(0); } }
+
+    .author-code { font-family: monospace; color: #e74a3b; background: #fdf2f2; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.9em; }
+</style>
+
+<div class="container-fluid p-0">
+    <h3 class="fw-bold mb-4 mt-2" style="color: #1cc88a"><i class="bi bi-vector-pen me-2"></i>Quản lý Tác Giả</h3>
+
+    <div class="custom-card mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-4">
+                <div class="input-group shadow-sm" style="max-width: 300px;">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" placeholder="Tìm tác giả..." @bind="searchText" @bind:event="oninput" />
+                </div>
+                <button class="btn text-white fw-bold shadow-sm px-4 rounded-pill" style="background-color: #1cc88a;" @onclick="OpenCreateModal">
+                    <i class="bi bi-person-plus-fill me-1"></i> Thêm Mới
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tên Tác Giả</th>
+                            <th>Mã Tác Giả (Code)</th>
+                            <th class="text-end">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (VisibleAuthors != null)
+                        {
+                            @foreach (var a in VisibleAuthors)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-light text-success d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
+                                                @(string.IsNullOrEmpty(a.Name) ? "?" : a.Name.Substring(0,1))
+                                            </div>
+                                            <span class="fw-bold text-dark">@a.Name</span>
+                                        </div>
+                                    </td>
+                                    <td><span class="author-code">@a.Code</span></td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-success border-0 bg-light me-1" @onclick="() => OpenEditModal(a)"><i class="bi bi-pencil-square"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger border-0 bg-light" @onclick="() => DeleteAuthor(a)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <div class="modal-header-custom">
+                <h5 class="mb-0 fw-bold">@(string.IsNullOrEmpty(currentAuthor.Id) ? "✨ Thêm Tác Giả" : "✏️ Cập Nhật")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <EditForm Model="currentAuthor" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    @* Mã Code *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">Mã Tác Giả (*)</label>
+                        <InputText class="form-control text-uppercase fw-bold" @bind-Value="currentAuthor.Code"/>
+                    </div>
+
+                    @* Tên *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">Tên Tác Giả (*)</label>
+                        <InputText class="form-control" @bind-Value="currentAuthor.Name" />
+                    </div>
+
+                    <div class="text-end pt-3 border-top">
+                        <button type="button" class="btn btn-light me-2" @onclick="CloseModal">Hủy</button>
+                        <button type="submit" class="btn text-white fw-bold px-4" style="background-color: #1cc88a;">Lưu Lại</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Author>? authors;
+    private Author currentAuthor = new();
+    private bool showModal = false;
+    private string searchText = "";
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+    private async Task LoadData() => authors = await StoreService.GetAllAuthorsAsync();
+
+    private IEnumerable<Author> VisibleAuthors => 
+        authors?.Where(a => 
+            (a.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (a.Code?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+        ) ?? new List<Author>();
+
+    private void OpenCreateModal() { currentAuthor = new Author(); currentAuthor.Id = string.Empty; showModal = true; }
+    
+    private void OpenEditModal(Author a) 
+    { 
+        currentAuthor = new Author { Id = a.Id, Name = a.Name, Code = a.Code, Status = a.Status }; 
+        showModal = true; 
+    }
+    
+    private void CloseModal() => showModal = false;
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(currentAuthor.Name) || string.IsNullOrWhiteSpace(currentAuthor.Code)) return;
+        
+        if (string.IsNullOrEmpty(currentAuthor.Id)) 
+            await StoreService.CreateAuthorAsync(currentAuthor);
+        else 
+            await StoreService.UpdateAuthorAsync(currentAuthor);
+            
+        showModal = false; 
+        await LoadData();
+    }
+
+    private async Task DeleteAuthor(Author a)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Xóa tác giả '{a.Name}'?")) {
+            await StoreService.DeleteAuthorAsync(a.Id); 
+            await LoadData();
+        }
+    }
+}
