@@ -1,0 +1,292 @@
+@page "/productlist"
+@layout StoreManagement.Client.Layout.AdminLayout
+
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+@inject IJSRuntime JSRuntime
+
+<style>
+    /* CSS Giữ nguyên như cũ */
+    :root { --primary: #4e73df; --bg-light: #f8f9fc; }
+    .custom-card { border: none; border-radius: 12px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); background: white; }
+    .book-cover-wrapper { width: 60px; height: 90px; border-radius: 6px; border: 1px solid #eaecf4; overflow: hidden; background: #f8f9fc; display: flex; align-items: center; justify-content: center; }
+    .book-cover-img { width: 100%; height: 100%; object-fit: cover; }
+    .badge-isbn { font-family: monospace; background: #eaecf4; color: #5a5c69; border: 1px solid #d1d3e2; font-size: 0.75rem; }
+    .badge-cat { background: #eefbfc; color: #36b9cc; border: 1px solid #bcebf2; font-size: 0.75rem; }
+    .price-text { color: #e74a3b; font-weight: 700; }
+    .meta-text { font-size: 0.85rem; color: #858796; }
+    
+    /* Modal Styles */
+    .modal-backdrop-custom { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .modal-content-custom { background: white; border-radius: 15px; width: 95%; max-width: 800px; animation: slideDown 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+    .modal-header-custom { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); color: white; padding: 15px 25px; border-radius: 15px 15px 0 0; display: flex; justify-content: space-between; align-items: center; }
+    @@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<div class="container-fluid p-0">
+    <h3 class="fw-bold mb-4 mt-2" style="color: #4e73df"><i class="bi bi-journal-album me-2"></i>Quản lý Kho Sách</h3>
+
+    <div class="custom-card mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="input-group shadow-sm" style="max-width: 400px;">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" 
+                           placeholder="Tìm tên sách, ISBN..." 
+                           @bind="searchText" @bind:event="oninput" />
+                </div>
+                
+                <AuthorizeView Roles="ADMIN">
+                    <button class="btn btn-primary fw-bold shadow-sm px-4 rounded-pill" @onclick="OpenCreateModal">
+                        <i class="bi bi-plus-lg me-1"></i> Nhập Sách Mới
+                    </button>
+                </AuthorizeView>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-primary">
+                        <tr>
+                            <th style="width: 8%" class="text-center">Ảnh</th>
+                            <th style="width: 40%">Thông tin chi tiết</th>
+                            <th style="width: 15%">Giá bán</th>
+                            <th style="width: 15%">Tồn kho</th>
+                            <th style="width: 12%">Trạng thái</th>
+                            <th style="width: 10%" class="text-end">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (VisibleBooks != null)
+                        {
+                            @foreach (var book in VisibleBooks)
+                            {
+                                <tr>
+                                    <td class="text-center">
+                                        <div class="book-cover-wrapper mx-auto">
+                                            <img src="@(string.IsNullOrEmpty(book.Image) ? "/images/no-image.png" : book.Image)" class="book-cover-img" onerror="this.src='/images/no-image.png'" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark mb-1">@book.Title</div>
+                                        <div class="d-flex gap-2 mb-2">
+                                            <span class="badge badge-isbn">@book.Isbn</span>
+                                            <span class="badge badge-cat">@(string.IsNullOrEmpty(book.CategoryName) ? "---" : book.CategoryName)</span>
+                                        </div>
+                                        <div class="meta-text">
+                                            <i class="bi bi-vector-pen me-1"></i> @(string.IsNullOrEmpty(book.AuthorName) ? "---" : book.AuthorName)
+                                            <span class="mx-2">|</span>
+                                            <i class="bi bi-building me-1"></i> @(string.IsNullOrEmpty(book.PublisherName) ? "---" : book.PublisherName)
+                                        </div>
+                                    </td>
+                                    <td><div class="price-text">@book.RetailPrice.ToString("N0") đ</div></td>
+                                    <td><div class="fw-bold text-dark">@book.StockQuantity</div></td>
+                                    <td>
+                                        @if (book.Status == "ACTIVE") { <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">Đang bán</span> }
+                                        else { <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-3">Ngừng bán</span> }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary border-0 bg-light me-1" @onclick="() => OpenEditModal(book)"><i class="bi bi-pencil-square fs-5"></i></button>
+                                        <AuthorizeView Roles="ADMIN">
+                                            <button class="btn btn-sm btn-outline-danger border-0 bg-light" @onclick="() => DeleteBook(book)"><i class="bi bi-trash fs-5"></i></button>
+                                        </AuthorizeView>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <div class="modal-header-custom">
+                <h5 class="mb-0 fw-bold">@(string.IsNullOrEmpty(currentBook.Id) ? "✨ Thêm Sách Mới" : "✏️ Cập Nhật Thông Tin")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <EditForm Model="currentBook" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-secondary">Tên Sách (*)</label>
+                                <InputText class="form-control" @bind-Value="currentBook.Title" placeholder="Nhập tên sách..." />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Mã ISBN</label>
+                                    <InputText class="form-control" @bind-Value="currentBook.Isbn" placeholder="VD: 978-3-16..." />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Giá Bán (VNĐ)</label>
+                                    <InputNumber class="form-control" @bind-Value="currentBook.RetailPrice" />
+                                </div>
+                            </div>
+
+                            @* --- 3 DROPDOWN QUAN TRỌNG --- *@
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Danh Mục</label>
+                                    <InputSelect class="form-select" @bind-Value="currentBook.CategoryId">
+                                        <option value="">-- Chọn --</option>
+                                        @foreach(var c in categories) { <option value="@c.Id">@c.CategoryName</option> }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Tác Giả</label>
+                                    <InputSelect class="form-select" @bind-Value="currentBook.AuthorId">
+                                        <option value="">-- Chọn --</option>
+                                        @foreach(var a in authors) { <option value="@a.Id">@a.Name</option> }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold small text-secondary">Nhà Xuất Bản</label>
+                                    <InputSelect class="form-select" @bind-Value="currentBook.PublisherId">
+                                        <option value="">-- Chọn --</option>
+                                        @foreach(var p in publishers) { <option value="@p.Id">@p.Name</option> }
+                                    </InputSelect>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-secondary">Link Ảnh Bìa</label>
+                                <InputTextArea class="form-control" rows="4" @bind-Value="currentBook.Image" placeholder="https://..." />
+                            </div>
+                            <div class="mb-3 text-center">
+                                <img src="@(string.IsNullOrEmpty(currentBook.Image) ? "/images/no-image.png" : currentBook.Image)" 
+                                     style="width: 100px; height: 150px; object-fit: cover; border: 1px dashed #ccc; border-radius: 4px;" 
+                                     onerror="this.src='/images/no-image.png'" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-secondary">Trạng Thái</label>
+                                <InputSelect class="form-select" @bind-Value="currentBook.Status">
+                                    <option value="ACTIVE">Đang bán</option>
+                                    <option value="INACTIVE">Ngừng kinh doanh</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end pt-3 border-top">
+                        <button type="button" class="btn btn-light me-2" @onclick="CloseModal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4">
+                            <i class="bi bi-save me-1"></i> Lưu Sách
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Dữ liệu chính
+    private List<Book>? books;
+    
+    // Dữ liệu cho Dropdown
+    private List<Category> categories = new();
+    private List<Author> authors = new();
+    private List<Publisher> publishers = new();
+
+    // Biến Modal
+    private Book currentBook = new();
+    private bool showModal = false;
+    private string searchText = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Tải tất cả dữ liệu cần thiết cùng lúc
+        await Task.WhenAll(LoadBooks(), LoadDropdownData());
+    }
+
+    private async Task LoadBooks() => books = await StoreService.GetBooksAsync();
+
+    private async Task LoadDropdownData()
+    {
+        categories = await StoreService.GetAllCategoriesAsync();
+        authors = await StoreService.GetAllAuthorsAsync();
+        publishers = await StoreService.GetAllPublishersAsync(); // Hoặc GetPublishersAsync tùy tên hàm bạn đặt
+    }
+
+    private IEnumerable<Book> VisibleBooks => 
+        books?.Where(b => 
+            (b.Title?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (b.Isbn?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+        ) ?? new List<Book>();
+
+    // --- LOGIC MODAL ---
+    private void OpenCreateModal() 
+    { 
+        currentBook = new Book 
+        { 
+            Id = null, // Quan trọng: Đánh dấu là tạo mới
+            Status = "ACTIVE",
+            StockQuantity = 0, // Sách mới chưa có hàng
+            RetailPrice = 0
+        }; 
+        showModal = true; 
+    }
+
+    private void OpenEditModal(Book b)
+    {
+        // Clone object để không sửa trực tiếp trên bảng
+        currentBook = new Book 
+        { 
+            Id = b.Id, 
+            Title = b.Title, 
+            Isbn = b.Isbn, 
+            RetailPrice = b.RetailPrice, 
+            Image = b.Image,
+            StockQuantity = b.StockQuantity,
+            Status = b.Status,
+            // Map các khóa ngoại
+            CategoryId = b.CategoryId,
+            AuthorId = b.AuthorId,
+            PublisherId = b.PublisherId
+        };
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(currentBook.Title)) return;
+
+        bool success = false;
+        if (string.IsNullOrEmpty(currentBook.Id)) 
+            success = await StoreService.CreateBookAsync(currentBook);
+        else 
+            success = await StoreService.UpdateBookAsync(currentBook);
+            
+        if (success)
+        {
+            showModal = false; 
+            await LoadBooks(); // Tải lại danh sách
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Có lỗi xảy ra khi lưu!");
+        }
+    }
+
+    private async Task DeleteBook(Book book)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Xóa sách '{book.Title}'?")) 
+        {
+            await StoreService.DeleteBookAsync(book.Id); 
+            await LoadBooks();
+        }
+    }
+}

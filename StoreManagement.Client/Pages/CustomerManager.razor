@@ -6,120 +6,276 @@
 @inject IJSRuntime JSRuntime
 
 <style>
-    /* Palette: primary, success, danger */
-    .cm-primary { color: #4e73df; }
-    .cm-bg-primary { background-color: #4e73df; color: white; }
-    .cm-success { color: #1cc88a; }
-    .cm-danger { color: #e74a3b; }
-    .cm-card { border-radius: 10px; box-shadow: 0 4px 20px rgba(78,115,223,0.08); }
+    /* Biến màu */
+    :root {
+        --primary-color: #4e73df;
+        --secondary-color: #858796;
+        --success-color: #1cc88a;
+        --background-light: #f8f9fc;
+    }
+
+    body {
+        background-color: var(--background-light);
+    }
+
+    /* Card & Table Styling */
+    .custom-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        background: white;
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: #f8f9fc;
+        color: #4e73df;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        border-bottom: 2px solid #e3e6f0;
+        padding: 1rem;
+    }
+
+    .table tbody td {
+        padding: 1rem;
+        color: #5a5c69;
+        vertical-align: middle;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #fdfdfd;
+    }
+
+    /* Avatar giả lập */
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background-color: #eaecf4;
+        color: #4e73df;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+
+    /* Modal Styling */
+    .modal-backdrop-custom {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-content-custom {
+        background-color: white;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .modal-header-custom {
+        background-color: #4e73df;
+        color: white;
+        padding: 15px 20px;
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    @@keyframes slideDown {
+        from { transform: translateY(-50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 </style>
 
-<h3 class="mt-2 cm-primary">Quản lý Khách hàng</h3>
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+        <h3 class="text-primary fw-bold"><i class="bi bi-people-fill me-2"></i>Quản lý Khách hàng</h3>
+    </div>
 
-<AuthorizeView Roles="ADMIN">
-    <Authorized Context="auth">
-        <div class="row mb-3">
-            <div class="col-md-12">
-                <div class="card cm-card p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h5 class="mb-0">Thêm khách hàng</h5>
-                    </div>
-                    <EditForm Model="newCustomer" OnValidSubmit="CreateCustomer">
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <InputText class="form-control" @bind-Value="newCustomer.Name" placeholder="Họ và tên" />
-                            </div>
-                            <div class="col-md-3">
-                                <InputText class="form-control" @bind-Value="newCustomer.Phone" placeholder="Số điện thoại" />
-                            </div>
-                            <div class="col-md-4">
-                                <InputText class="form-control" @bind-Value="newCustomer.Address" placeholder="Địa chỉ" />
-                            </div>
-                            <div class="col-md-1 d-grid">
-                                <button class="btn cm-bg-primary ms-1">Thêm</button>
+    <AuthorizeView Roles="ADMIN">
+        <Authorized Context="auth">
+            <div class="custom-card mb-4">
+                <div class="card-body p-4">
+                    <div class="row g-3 align-items-center justify-content-between mb-4">
+                        <div class="col-md-6">
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-secondary"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" 
+                                       placeholder="Tìm theo tên, email hoặc SĐT..." 
+                                       @bind="searchText" @bind:event="oninput" @onkeyup="ApplySearch" />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch" title="Xóa tìm kiếm">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
                             </div>
                         </div>
-                    </EditForm>
-                    @if (!string.IsNullOrEmpty(formMessage))
+                        <div class="col-md-auto text-end">
+                            <button class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold" @onclick="OpenModal">
+                                <i class="bi bi-person-plus-fill me-2"></i>Thêm Khách Hàng
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        @if (filteredCustomers == null)
+                        {
+                             <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
+                            </div>
+                        }
+                        else if (!filteredCustomers.Any())
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox fs-1 text-gray-300"></i>
+                                <p class="text-muted mt-2">Không tìm thấy dữ liệu khách hàng nào.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">ID</th>
+                                        <th>Khách hàng</th>
+                                        <th>Liên hệ</th>
+                                        <th>Địa chỉ</th>
+                                        <th>Ngày tham gia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var c in filteredCustomers)
+                                    {
+                                        <tr>
+                                            <td class="text-center text-muted small">#@c.Id</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle">
+                                                        @(string.IsNullOrEmpty(c.Name) ? "?" : c.Name.Substring(0, 1).ToUpper())
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-dark">@(string.IsNullOrEmpty(c.Name) ? "Chưa đặt tên" : c.Name)</div>
+                                                        <small class="text-muted">Thành viên</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span><i class="bi bi-telephone me-2 text-success"></i>@(string.IsNullOrEmpty(c.Phone) ? "---" : c.Phone)</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <i class="bi bi-geo-alt me-1 text-danger"></i> @c.Address
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-secondary border">
+                                                    @c.CreatedAt.ToString("dd/MM/yyyy")
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                    
+                    @if(customers.Any())
                     {
-                        <div class="mt-2 alert alert-info">@formMessage</div>
-                    }
-
-                    @* Search moved here under the add form *@
-                    <div class="mt-3">
-                        <div class="d-flex mb-2">
-                            <input class="form-control me-2" placeholder="Tìm theo tên, email, số điện thoại" @bind="searchText" @bind:event="oninput" />
-                            <button class="btn btn-outline-secondary" @onclick="ApplySearch">Tìm</button>
-                            <button class="btn btn-outline-secondary ms-2" @onclick="ClearSearch">Xóa</button>
+                         <div class="mt-3 text-muted small fst-italic text-end">
+                            Hiển thị @filteredCustomers.Count() / @customers.Count() khách hàng
                         </div>
-                        <small class="text-muted">Tìm kiếm sẽ lọc kết quả hiện có. Backend chỉ hỗ trợ phân trang.</small>
-                    </div>
+                    }
                 </div>
             </div>
-        </div>
-
-        <div class="card cm-card">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">Danh sách khách hàng</h5>
+        </Authorized>
+        <NotAuthorized>
+            <div class="alert alert-danger shadow-sm text-center mt-5">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> Bạn không có quyền truy cập trang này.
             </div>
-            <div class="card-body">
-                @if (filteredCustomers == null)
-                {
-                    <p>Đang tải...</p>
-                }
-                else if (!filteredCustomers.Any())
-                {
-                    <p class="text-muted">Không tìm thấy khách hàng.</p>
-                }
-                else
-                {
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Tên</th>
-                                <th>Email</th>
-                                <th>SĐT</th>
-                                <th>Địa chỉ</th>
-                                <th>Ngày tạo</th>
-                                @* Action column removed (backend does not support update/delete) *@
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var c in filteredCustomers)
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <div class="modal-header-custom">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2"></i>Thêm Khách Hàng Mới</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <EditForm Model="newCustomer" OnValidSubmit="CreateCustomer">
+                    <DataAnnotationsValidator />
+                    
+                    @if (!string.IsNullOrEmpty(formMessage))
+                    {
+                        <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mb-3 py-2">
+                            <i class="bi @(isSuccess ? "bi-check-circle" : "bi-exclamation-circle") me-2"></i>@formMessage
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">Họ và tên <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="newCustomer.Name" placeholder="Nhập tên khách hàng" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">Số điện thoại <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="newCustomer.Phone" placeholder="Ví dụ: 0901234567" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">Địa chỉ</label>
+                        <InputTextArea class="form-control" @bind-Value="newCustomer.Address" placeholder="Nhập địa chỉ liên hệ" rows="3" />
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-light" @onclick="CloseModal">Đóng</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4" disabled="@isBusy">
+                            @if (isBusy)
                             {
-                                <tr>
-                                    <td style="width:80px">@c.Id</td>
-                                    <td>@(string.IsNullOrEmpty(c.Name) ? "-" : c.Name)</td>
-                                    <td>@(string.IsNullOrEmpty(c.Email) ? "-" : c.Email)</td>
-                                    <td>@(string.IsNullOrEmpty(c.Phone) ? "-" : c.Phone)</td>
-                                    <td>@c.Address</td>
-                                    <td>@(c.CreatedAt.ToString("g"))</td>
-                                    @* actions removed *@
-                                </tr>
+                                <span class="spinner-border spinner-border-sm me-2"></span><span>Đang xử lý...</span>
                             }
-                        </tbody>
-                    </table>
-                }
+                            else
+                            {
+                                <span><i class="bi bi-save me-2"></i>Lưu lại</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
             </div>
         </div>
-
-        @* Edit panel removed because backend does not provide update endpoint. *@
-    </Authorized>
-    <NotAuthorized>
-        <p>Bạn không có quyền truy cập trang này.</p>
-    </NotAuthorized>
-</AuthorizeView>
+    </div>
+}
 
 @code {
     private List<Customer> customers = new();
     private IEnumerable<Customer> filteredCustomers = new List<Customer>();
     private Customer newCustomer = new();
-    private string? formMessage;
-
+    
+    // Trạng thái UI
+    private bool showModal = false;
     private string searchText = string.Empty;
-
-    // Edit/update/delete not supported by backend; UI simplified accordingly
+    private string? formMessage;
+    private bool isSuccess = false;
+    private bool isBusy = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -128,6 +284,7 @@
 
     private async Task LoadCustomers()
     {
+        // Giả lập loading nhanh để UI mượt hơn nếu cần
         var res = await ApiService.GetCustomersAsync(1, 100);
         if (res.Success && res.Data != null)
         {
@@ -163,30 +320,52 @@
         ApplySearch();
     }
 
+    // --- Modal Logic ---
+    private void OpenModal()
+    {
+        newCustomer = new(); // Reset form
+        formMessage = null;
+        isBusy = false;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
     private async Task CreateCustomer()
     {
         if (string.IsNullOrWhiteSpace(newCustomer.Name) || string.IsNullOrWhiteSpace(newCustomer.Phone))
         {
-            formMessage = "Tên và số điện thoại không được để trống.";
+            isSuccess = false;
+            formMessage = "Vui lòng nhập tên và số điện thoại.";
             return;
         }
 
-        var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn thêm khách hàng này?");
-        if (!ok) return;
+        isBusy = true;
+        // Tắt confirm JS mặc định để UI hiện đại hơn, hoặc giữ lại tùy bạn. 
+        // Ở đây mình bỏ confirm JS để thao tác nhanh, nếu cần thì uncomment dòng dưới.
+        // var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn thêm khách hàng này?");
+        // if (!ok) { isBusy = false; return; }
 
-        formMessage = null;
         var res = await ApiService.CreateCustomerAsync(newCustomer.Name, newCustomer.Phone, newCustomer.Address);
+        
         if (res.Success)
         {
-            formMessage = "Thêm khách hàng thành công.";
+            isSuccess = true;
+            formMessage = "Thêm khách hàng thành công!";
             await LoadCustomers();
-            newCustomer = new();
+            
+            // Tự động đóng modal sau 1s để người dùng đọc thông báo
+            await Task.Delay(1000);
+            CloseModal();
         }
         else
         {
+            isSuccess = false;
             formMessage = res.Message ?? "Thêm khách hàng thất bại.";
         }
+        isBusy = false;
     }
-
-    // update/delete helpers removed because backend doesn't provide endpoints; keep list read-only and creation only
 }

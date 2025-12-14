@@ -1,0 +1,171 @@
+@page "/categories"
+@layout StoreManagement.Client.Layout.AdminLayout
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+@inject IJSRuntime JSRuntime
+
+<style>
+    /* Style đồng bộ với Author/Publisher */
+    :root { --primary: #4e73df; --bg-light: #f8f9fc; }
+    body { background-color: var(--bg-light); }
+    
+    .custom-card { border: none; border-radius: 12px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); background: white; }
+    .table thead th { background-color: #f8f9fc; color: #4e73df; border-bottom: 2px solid #e3e6f0; }
+    
+    /* Modal */
+    .modal-backdrop-custom { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .modal-content-custom { background: white; border-radius: 15px; width: 95%; max-width: 500px; animation: slideDown 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .modal-header-custom { background: linear-gradient(135deg, #36b9cc 0%, #258391 100%); color: white; padding: 15px 25px; border-radius: 15px 15px 0 0; display: flex; justify-content: space-between; align-items: center; }
+    @@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { opacity: 1; transform: translateY(0); } }
+
+    /* Badge cho Mã Danh Mục */
+    .cat-code { font-family: monospace; color: #36b9cc; background: #eefbfc; padding: 4px 8px; border-radius: 6px; font-weight: bold; border: 1px solid #bcebf2; }
+</style>
+
+<div class="container-fluid p-0">
+    <h3 class="fw-bold mb-4 mt-2" style="color: #36b9cc"><i class="bi bi-tags-fill me-2"></i>Quản lý Danh Mục</h3>
+
+    <div class="custom-card mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-4">
+                <div class="input-group shadow-sm" style="max-width: 300px;">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" 
+                           placeholder="Tìm danh mục..." 
+                           @bind="searchText" @bind:event="oninput" />
+                </div>
+                <button class="btn text-white fw-bold shadow-sm px-4 rounded-pill" style="background-color: #36b9cc;" @onclick="OpenCreateModal">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm Mới
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Tên Danh Mục</th>
+                            <th style="width: 30%">Mã Danh Mục (Code)</th>
+                            <th style="width: 20%" class="text-center">Trạng Thái</th>
+                            <th style="width: 10%" class="text-end">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (VisibleCategories != null)
+                        {
+                            @foreach (var c in VisibleCategories)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-dark fs-6">@c.CategoryName</div>
+                                    </td>
+                                    <td>
+                                        <span class="cat-code">@c.CategoryCode</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1 rounded-pill">
+                                            @c.Status
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-info border-0 bg-light me-1" @onclick="() => OpenEditModal(c)"><i class="bi bi-pencil-square fs-6"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger border-0 bg-light" @onclick="() => DeleteCategory(c)"><i class="bi bi-trash fs-6"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                 @if (VisibleCategories != null && !VisibleCategories.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">Không tìm thấy dữ liệu.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <div class="modal-header-custom">
+                <h5 class="mb-0 fw-bold">@(string.IsNullOrEmpty(currentCategory.Id) ? "✨ Thêm Danh Mục" : "✏️ Cập Nhật")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <EditForm Model="currentCategory" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    @* Mã Code *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">Mã Danh Mục (*)</label>
+                        <InputText class="form-control text-uppercase fw-bold" @bind-Value="currentCategory.CategoryCode" />
+                    </div>
+
+                    @* Tên *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">Tên Danh Mục (*)</label>
+                        <InputText class="form-control" @bind-Value="currentCategory.CategoryName" />
+                    </div>
+
+                    <div class="text-end pt-3 border-top">
+                        <button type="button" class="btn btn-light me-2" @onclick="CloseModal">Hủy bỏ</button>
+                        <button type="submit" class="btn text-white fw-bold px-4" style="background-color: #36b9cc;">Lưu Lại</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Category>? categories;
+    private Category currentCategory = new();
+    private bool showModal = false;
+    private string searchText = "";
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+    private async Task LoadData() => categories = await StoreService.GetAllCategoriesAsync();
+
+    private IEnumerable<Category> VisibleCategories => 
+        categories?.Where(c => 
+            (c.CategoryName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.CategoryCode?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+        ) ?? new List<Category>();
+
+    private void OpenCreateModal() { currentCategory = new Category(); currentCategory.Id = string.Empty; showModal = true; }
+    
+    private void OpenEditModal(Category c) 
+    { 
+        currentCategory = new Category { Id = c.Id, CategoryName = c.CategoryName, CategoryCode = c.CategoryCode, Status = c.Status }; 
+        showModal = true; 
+    }
+    
+    private void CloseModal() => showModal = false;
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(currentCategory.CategoryName) || string.IsNullOrWhiteSpace(currentCategory.CategoryCode)) return;
+        
+        if (string.IsNullOrEmpty(currentCategory.Id)) 
+            await StoreService.CreateCategoryAsync(currentCategory);
+        else 
+            await StoreService.UpdateCategoryAsync(currentCategory);
+            
+        showModal = false; 
+        await LoadData();
+    }
+
+    private async Task DeleteCategory(Category c)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Xóa danh mục '{c.CategoryName}'?")) 
+        {
+            await StoreService.DeleteCategoryAsync(c.Id); 
+            await LoadData();
+        }
+    }
+}
