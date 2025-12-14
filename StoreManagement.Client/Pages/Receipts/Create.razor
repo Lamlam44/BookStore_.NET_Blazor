@@ -1,255 +1,222 @@
 @page "/receipts/create"
 @layout StoreManagement.Client.Layout.AdminLayout
+@attribute [Authorize(Roles = "ADMIN,STAFF")]
+
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services
-@using Microsoft.JSInterop
 @inject IStoreService StoreService
-@inject NavigationManager NavManager
+@inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
 <style>
-    /* CSS Bảng nhập liệu */
-    .receipt-table th { background-color: #f8f9fa; font-size: 0.85rem; text-transform: uppercase; color: #6c757d; }
-    .receipt-table td { vertical-align: middle; }
-    .total-display { font-size: 1.5rem; color: #dc3545; font-weight: 800; }
+    .custom-card { border: none; border-radius: 12px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); background: white; }
+    .bg-gradient-primary { background: linear-gradient(180deg, #4e73df 10%, #224abe 100%); color: white; }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="text-primary fw-bold"><i class="bi bi-file-earmark-plus me-2"></i>Tạo Phiếu Nhập Kho</h3>
-    <a href="/inventory" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Quay lại kho
-    </a>
-</div>
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-primary"><i class="bi bi-box-seam me-2"></i>Tạo Phiếu Nhập Kho</h3>
+        <a href="receipts" class="btn btn-outline-secondary border-0"><i class="bi bi-arrow-left me-1"></i> Quay lại</a>
+    </div>
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card shadow-sm border-0 mb-3">
-            <div class="card-header bg-primary text-white fw-bold">
-                <i class="bi bi-info-circle me-2"></i>Thông tin chung
-            </div>
-            <div class="card-body">
-                @* 1. Chọn Nhà Cung Cấp *@
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Nhà cung cấp <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <select class="form-select" @bind="newReceipt.SupplierId">
-                            <option value="">-- Chọn nhà cung cấp --</option>
-                            @if (suppliers != null)
-                            {
-                                foreach (var s in suppliers)
+    <div class="row">
+        <div class="col-md-4">
+            <div class="custom-card mb-4">
+                <div class="card-header bg-gradient-primary py-3">
+                    <h6 class="m-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Thông tin chung</h6>
+                </div>
+                <div class="card-body p-4">
+                    <EditForm Model="newReceipt">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">Ngày nhập</label>
+                            <InputDate class="form-control" @bind-Value="newReceipt.CreatedAt" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">Nhà cung cấp (*)</label>
+                            <InputSelect class="form-select" @bind-Value="newReceipt.SupplierId">
+                                <option value="">-- Chọn NCC --</option>
+                                @foreach (var s in suppliers)
                                 {
                                     <option value="@s.Id">@s.SupplierName</option>
                                 }
-                            }
-                        </select>
-                        <a href="/suppliers" class="btn btn-outline-primary" title="Thêm NCC mới">
-                            <i class="bi bi-plus-lg"></i>
-                        </a>
-                    </div>
-                </div>
+                            </InputSelect>
+                        </div>
 
-                @* 2. Ngày nhập *@
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Ngày nhập:</label>
-                    <input type="date" class="form-control" @bind="newReceipt.ReceiptDate" />
-                </div>
+                        <div class="alert alert-info mt-4">
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>TỔNG TIỀN:</span>
+                                <span class="text-danger fs-5">@newReceipt.TotalCost.ToString("N0") đ</span>
+                            </div>
+                        </div>
 
-                <hr />
-                
-                @* 3. Tổng tiền *@
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-muted">Tổng tiền:</h5>
-                    <span class="total-display">@CalculateTotalCost().ToString("N0") đ</span>
+                        <button type="button" class="btn btn-primary w-100 fw-bold py-2 mt-2" 
+                                @onclick="HandleSubmit" 
+                                disabled="@(!newReceipt.ReceiptDetails.Any())">
+                            <i class="bi bi-save me-1"></i> LƯU PHIẾU NHẬP
+                        </button>
+                    </EditForm>
                 </div>
-
-                @* 4. Nút Lưu *@
-                <button class="btn btn-success w-100 mt-4 py-2 fw-bold shadow-sm" @onclick="SaveReceipt">
-                    <i class="bi bi-save me-2"></i> LƯU PHIẾU NHẬP
-                </button>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-8">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-light text-dark border-bottom">
-                <i class="bi bi-box-seam me-2"></i>Chi tiết sản phẩm nhập
-            </div>
-            <div class="card-body">
-                
-                <div class="row g-2 align-items-end mb-4 bg-light p-3 rounded border mx-0">
-                    <div class="col-md-5">
-                        <label class="small fw-bold mb-1">Sản phẩm:</label>
-                        @if (books == null)
-                        {
-                            <select class="form-select form-select-sm" disabled><option>⏳ Đang tải dữ liệu...</option></select>
-                        }
-                        else 
-                        {
-                            <div class="input-group input-group-sm">
-                                <select class="form-select" @bind="tempBookId">
-                                    <option value="">-- Chọn sách --</option>
-                                    @foreach (var b in books)
-                                    {
-                                        <option value="@b.Id">@b.Title (Tồn: @b.StockQuantity)</option>
-                                    }
-                                </select>
-                                
-                                @* Nút reload danh sách (Giữ lại để tiện cập nhật nếu thêm sách ở tab khác) *@
-                                <button class="btn btn-outline-primary" @onclick="ReloadBooks" title="Tải lại danh sách">
-                                    <i class="bi bi-arrow-repeat"></i>
-                                </button>
-                            </div>
-                            @if(books.Count == 0) { <small class="text-danger">Chưa có sách nào.</small> }
-                        }
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="small fw-bold mb-1">Số lượng:</label>
-                        <input type="number" class="form-control form-select-sm" @bind="tempQty" min="1" placeholder="SL" />
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <label class="small fw-bold mb-1">Giá nhập (VNĐ):</label>
-                        <input type="number" class="form-control form-select-sm" @bind="tempUnitCost" placeholder="Đơn giá" />
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <button class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AddDetail">
-                            <i class="bi bi-plus-lg"></i> Thêm
-                        </button>
-                    </div>
+        <div class="col-md-8">
+            <div class="custom-card">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h6 class="m-0 fw-bold text-primary">Chi tiết nhập hàng</h6>
                 </div>
-
-                @if (receiptDetailsList.Count == 0)
-                {
-                    <div class="text-center text-muted py-5 border rounded bg-light border-dashed">
-                        <i class="bi bi-cart-x fs-1 d-block mb-2 text-secondary"></i>
-                        Chưa có sản phẩm nào trong phiếu.
+                <div class="card-body p-4">
+                    
+                    <div class="row g-2 align-items-end mb-4 p-3 bg-light rounded-3 border">
+                        <div class="col-md-5">
+                            <label class="small fw-bold text-secondary">Chọn Sách</label>
+                            <select class="form-select" @bind="currentDetail.BookId">
+                                <option value="">-- Chọn sách --</option>
+                                @foreach (var b in books)
+                                {
+                                    <option value="@b.Id">@b.Title (ISBN: @b.Isbn)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small fw-bold text-secondary">Số lượng</label>
+                            <input type="number" class="form-control" @bind="currentDetail.QuantityReceived" min="1" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-secondary">Giá nhập (đ)</label>
+                            <input type="number" class="form-control" @bind="currentDetail.UnitCost" min="0" />
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-success w-100 fw-bold" @onclick="AddItem">
+                                <i class="bi bi-plus-lg"></i> Thêm
+                            </button>
+                        </div>
                     </div>
-                }
-                else
-                {
+
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover receipt-table mb-0">
-                            <thead>
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
                                 <tr>
                                     <th>Tên Sách</th>
-                                    <th class="text-center" style="width: 80px;">SL</th>
-                                    <th class="text-end" style="width: 130px;">Đơn giá</th>
-                                    <th class="text-end" style="width: 150px;">Thành tiền</th>
-                                    <th class="text-center" style="width: 60px;">#</th>
+                                    <th class="text-center">SL</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                    <th class="text-end">Xóa</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var item in receiptDetailsList)
+                                @foreach (var item in newReceipt.ReceiptDetails)
                                 {
                                     <tr>
-                                        <td>
-                                            <span class="fw-bold text-dark">@GetBookTitle(item.BookId)</span>
-                                        </td>
+                                        <td>@item.BookTitle</td>
                                         <td class="text-center">@item.QuantityReceived</td>
                                         <td class="text-end">@item.UnitCost.ToString("N0")</td>
-                                        <td class="text-end fw-bold text-primary">@item.TotalLineCost.ToString("N0")</td>
-                                        <td class="text-center">
-                                            <button class="btn btn-outline-danger btn-sm border-0" @onclick="() => RemoveDetail(item)">
-                                                <i class="bi bi-trash-fill"></i>
+                                        <td class="text-end fw-bold">@((item.QuantityReceived * item.UnitCost).ToString("N0"))</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-danger border-0" @onclick="() => RemoveItem(item)">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
+                                    </tr>
+                                }
+                                @if (!newReceipt.ReceiptDetails.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">Chưa có sách nào được thêm.</td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
-                }
+
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @code {
-    // --- BIẾN DỮ LIỆU ---
-    private List<Supplier>? suppliers;
-    private List<Book>? books;
-
-    // Model
-    private InventoryReceipt newReceipt = new InventoryReceipt { ReceiptDate = DateTime.Now };
-    private List<ReceiptDetail> receiptDetailsList = new List<ReceiptDetail>();
-
-    // Biến trạng thái
-    private string tempBookId = "";
-    private int tempQty = 1;
-    private decimal tempUnitCost = 0;
+    private InventoryReceipt newReceipt = new InventoryReceipt { CreatedAt = DateTime.Now };
+    private ReceiptDetail currentDetail = new ReceiptDetail { QuantityReceived = 1 };
+    
+    private List<Supplier> suppliers = new();
+    private List<Book> books = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        var t1 = StoreService.GetSuppliersAsync();
+        var t2 = StoreService.GetBooksAsync();
+        
+        await Task.WhenAll(t1, t2);
+        suppliers = await t1;
+        books = await t2;
     }
 
-    private async Task LoadData()
+    private void AddItem()
     {
-        suppliers = await StoreService.GetSuppliersAsync();
-        books = await StoreService.GetBooksAsync();
-    }
+        if (string.IsNullOrEmpty(currentDetail.BookId)) return;
+        
+        var selectedBook = books.FirstOrDefault(b => b.Id == currentDetail.BookId);
+        if (selectedBook == null) return;
 
-    private async Task ReloadBooks()
-    {
-        books = null; // Hiện loading
-        StateHasChanged();
-        await Task.Delay(300);
-        books = await StoreService.GetBooksAsync();
-        StateHasChanged();
-    }
-
-    // --- LOGIC NHẬP KHO ---
-    private void AddDetail()
-    {
-        if (string.IsNullOrEmpty(tempBookId) || tempQty <= 0 || tempUnitCost <= 0) return;
-
-        var existing = receiptDetailsList.FirstOrDefault(x => x.BookId == tempBookId && x.UnitCost == tempUnitCost);
+        // Kiểm tra xem sách đã có trong list chưa
+        var existing = newReceipt.ReceiptDetails.FirstOrDefault(x => x.BookId == currentDetail.BookId);
         if (existing != null)
         {
-            existing.QuantityReceived += tempQty;
-            existing.TotalLineCost = existing.QuantityReceived * existing.UnitCost;
+            existing.QuantityReceived += currentDetail.QuantityReceived;
+            existing.UnitCost = currentDetail.UnitCost; // Cập nhật giá mới nhất
         }
         else
         {
-            receiptDetailsList.Add(new ReceiptDetail
+            newReceipt.ReceiptDetails.Add(new ReceiptDetail
             {
-                BookId = tempBookId,
-                QuantityReceived = tempQty,
-                UnitCost = tempUnitCost,
-                TotalLineCost = tempQty * tempUnitCost
+                BookId = selectedBook.Id,
+                BookTitle = selectedBook.Title,
+                QuantityReceived = currentDetail.QuantityReceived,
+                UnitCost = currentDetail.UnitCost
             });
         }
-        tempQty = 1;
+
+        CalculateTotal();
+        
+        // Reset form nhập dòng
+        currentDetail = new ReceiptDetail { QuantityReceived = 1, UnitCost = 0 };
     }
 
-    private void RemoveDetail(ReceiptDetail detail) => receiptDetailsList.Remove(detail);
-    private decimal CalculateTotalCost() => receiptDetailsList.Sum(x => x.TotalLineCost);
-    private string GetBookTitle(string bookId) => books?.FirstOrDefault(b => b.Id == bookId)?.Title ?? "Unknown";
-
-    private async Task SaveReceipt()
+    private void RemoveItem(ReceiptDetail item)
     {
-        if (string.IsNullOrEmpty(newReceipt.SupplierId) || receiptDetailsList.Count == 0)
+        newReceipt.ReceiptDetails.Remove(item);
+        CalculateTotal();
+    }
+
+    private void CalculateTotal()
+    {
+        // Tính tổng tiền dựa trên danh sách chi tiết
+        newReceipt.TotalCost = newReceipt.ReceiptDetails.Sum(x => x.QuantityReceived * x.UnitCost);
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrEmpty(newReceipt.SupplierId))
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Vui lòng chọn NCC và nhập ít nhất 1 sản phẩm!");
+            await JSRuntime.InvokeVoidAsync("alert", "Vui lòng chọn Nhà cung cấp!");
             return;
         }
 
-        newReceipt.ReceiptDetails = receiptDetailsList;
-        newReceipt.TotalCost = CalculateTotalCost();
+        // QUAN TRỌNG: Tính lại tổng tiền lần cuối trước khi gửi để đảm bảo chính xác
+        CalculateTotal();
 
-        bool success = await StoreService.CreateReceiptAsync(newReceipt);
-
+        var success = await StoreService.CreateReceiptAsync(newReceipt);
         if (success)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "✅ Nhập kho thành công!");
-            NavManager.NavigateTo("/inventory");
+            await JSRuntime.InvokeVoidAsync("alert", "Tạo phiếu nhập thành công (Trạng thái: Nháp)!");
+            Navigation.NavigateTo("/receipts");
         }
         else
         {
-            await JSRuntime.InvokeVoidAsync("alert", "❌ Lỗi khi lưu phiếu. Vui lòng thử lại!");
+            await JSRuntime.InvokeVoidAsync("alert", "Lỗi khi tạo phiếu nhập! Vui lòng kiểm tra lại.");
         }
     }
 }

@@ -64,14 +64,16 @@ namespace StoreManagement.Client.Services
         Task<List<Customer>> GetCustomersAsync();
         Task CreateCustomerAsync(Customer customer);
         
-        // Overload hỗ trợ phân trang & tạo nhanh (nếu code cũ cần)
+        // Overload hỗ trợ phân trang & tạo nhanh
         Task<ApiResponse<PaginationResponse<Customer>>> GetCustomersAsync(int pageNumber, int pageSize);
         Task<ApiResponse<bool>> CreateCustomerAsync(string name, string phone, string address);
 
         // ==========================================
-        // 8. KHO HÀNG & HÓA ĐƠN (INVENTORY & DASHBOARD)
+        // 8. KHO HÀNG (INVENTORY RECEIPTS)
         // ==========================================
         Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
-        Task<List<Invoice>> GetInvoicesAsync(); // Dùng cho Dashboard
+        Task<List<InventoryReceipt>> GetReceiptsAsync();
+        Task<bool> UpdateReceiptStatusAsync(string id, string status);
+        Task<InventoryReceipt?> GetReceiptByIdAsync(string id);
     }
 }
