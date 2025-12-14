@@ -237,5 +237,42 @@ namespace StoreManagement.Client.Services
                 throw new Exception($"Failed to create customer: {ex.Message}");
             }
         }
+
+        public async Task<List<Customer>> SearchCustomersAsync(string keyword)
+        {
+            try
+            {
+                var url = $"api/customers?Query={keyword}&PageNumber=1&PageSize=10";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Customer>>>(url);
+                return response?.Data?.Items ?? new List<Customer>();
+            }
+            catch { return new List<Customer>(); }
+        }
+
+        public async Task<Invoice?> CreateInvoiceAsync(CreateInvoiceRequest request)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/orders/pos", request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<ApiResponse<Invoice>>();
+                    return result?.Data;
+                }
+                return null;
+            }
+            catch { return null; }
+        }
+
+        public async Task<Voucher?> SearchVoucherByCodeAsync(string code)
+        {
+            try
+            {
+                var url = $"api/vouchers/search?Code={code}&PageNumber=1&PageSize=1";
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Voucher>>>(url);
+                return response?.Data?.Items?.FirstOrDefault();
+            }
+            catch { return null; }
+        }
     }
 }

@@ -1,0 +1,218 @@
+@page "/pos"
+@layout AdminLayout
+@using StoreManagement.Client.Models
+@attribute [Authorize(Roles = "Staff")]
+@inject IStoreService StoreService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<link href="css/Pos.razor.css" rel="stylesheet" />
+
+<div class="pos-container">
+    <div class="product-side">
+        <h3>Products</h3>
+        <div class="search-bar">
+            <input @bind="searchTerm" @oninput="SearchProducts" placeholder="Search products..." />
+        </div>
+        <div class="product-list">
+            @foreach (var product in products)
+            {
+                <div class="product-item">
+                    <span>@product.Title</span>
+                    <button @onclick="() => AddToCart(product)">Add</button>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="bill-side">
+        <h3>Bill</h3>
+        <div class="cart">
+            @foreach (var item in cart)
+            {
+                <div class="cart-item">
+                    <span>@item.ProductName</span>
+                    <span>@item.Quantity</span>
+                    <button @onclick="() => UpdateQuantity(item, 1)">+</button>
+                    <button @onclick="() => UpdateQuantity(item, -1)">-</button>
+                    <button @onclick="() => RemoveFromCart(item)">Remove</button>
+                </div>
+            }
+        </div>
+        <div class="customer-lookup">
+            <input @bind="customerPhone" @oninput="SearchCustomers" placeholder="Customer phone..." />
+            @if (customers.Any())
+            {
+                <ul class="customer-list">
+                    @foreach (var customer in customers)
+                    {
+                        <li @onclick="() => SelectCustomer(customer)">@customer.Name - @customer.Phone</li>
+                    }
+                </ul>
+            }
+        </div>
+        <div class="payment">
+            <input @bind="voucherCode" placeholder="Voucher code" />
+            <button @onclick="ApplyVoucher">Apply</button>
+            <select @bind="paymentMethod">
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+            </select>
+            <button @onclick="Pay">Pay</button>
+        </div>
+        <div class="total">
+            <p>Total: @totalAmount</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string searchTerm = "";
+    private List<Book> products = new();
+    private List<CartItem> cart = new();
+    private string? customerPhone = "";
+    private List<Customer> customers = new();
+    private Customer? selectedCustomer;
+    private string voucherCode = "";
+    private Voucher? appliedVoucher;
+    private string paymentMethod = "CASH";
+    private decimal totalAmount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await StoreService.GetBooksAsync();
+    }
+
+    private async Task SearchProducts(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            products = await StoreService.GetBooksAsync();
+        }
+        else
+        {
+            products = await StoreService.SearchBooksAsync(searchTerm);
+        }
+    }
+
+    private void AddToCart(Book product)
+    {
+        var existingItem = cart.FirstOrDefault(i => i.ProductId == product.Id);
+        if (existingItem != null)
+        {
+            existingItem.Quantity++;
+        }
+        else
+        {
+            cart.Add(new CartItem
+                {
+                    ProductId = product.Id,
+                    ProductName = product.Title,
+                    Quantity = 1,
+                    Price = product.RetailPrice
+                });
+        }
+        CalculateTotal();
+    }
+
+    private void UpdateQuantity(CartItem item, int quantity)
+    {
+        item.Quantity += quantity;
+        if (item.Quantity <= 0)
+        {
+            RemoveFromCart(item);
+        }
+        CalculateTotal();
+    }
+
+    private void RemoveFromCart(CartItem item)
+    {
+        cart.Remove(item);
+        CalculateTotal();
+    }
+
+    private async Task SearchCustomers(ChangeEventArgs e)
+    {
+        customerPhone = e.Value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(customerPhone))
+        {
+            customers = new();
+        }
+        else
+        {
+            customers = await StoreService.SearchCustomersAsync(customerPhone);
+        }
+    }
+
+    private void SelectCustomer(Customer customer)
+    {
+        selectedCustomer = customer;
+        customerPhone = customer.Phone;
+        customers = new();
+    }
+
+    private async Task ApplyVoucher()
+    {
+        if (!string.IsNullOrWhiteSpace(voucherCode))
+        {
+            appliedVoucher = await StoreService.SearchVoucherByCodeAsync(voucherCode);
+            if (appliedVoucher == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid voucher code");
+            }
+            CalculateTotal();
+        }
+    }
+
+    private void CalculateTotal()
+    {
+        totalAmount = cart.Sum(i => i.Price * i.Quantity);
+        if (appliedVoucher != null)
+        {
+            totalAmount -= appliedVoucher.DiscountValue;
+        }
+    }
+
+    private async Task Pay()
+    {
+        if (!cart.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Cart is empty");
+            return;
+        }
+
+        var request = new Models.CreateInvoiceRequest
+            {
+                OrderType = "POS",
+                PaymentMethod = paymentMethod,
+                PaymentStatus = "PAID",
+                Status = "COMPLETED",
+                CustomerId = selectedCustomer?.Id,
+                VoucherId = appliedVoucher?.Id,
+                AmountPaid = totalAmount,
+                Details = cart.Select(i => new Models.InvoiceDetailDto
+                {
+                    BookId = i.ProductId,
+                    Quantity = i.Quantity,
+                    TotalDiscount = 0 // Assuming no discount per item for now
+                }).ToList()
+            };
+
+        var invoice = await StoreService.CreateInvoiceAsync(request);
+        if (invoice != null)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Invoice created successfully");
+            cart.Clear();
+            selectedCustomer = null;
+            appliedVoucher = null;
+            voucherCode = "";
+            customerPhone = "";
+            CalculateTotal();
+            NavigationManager.NavigateTo($"/orders/detail/{invoice.Id}");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to create invoice. API may be missing or there was an error.");
+        }
+    }
+}

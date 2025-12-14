@@ -31,7 +31,7 @@ else if (product != null)
 
 @code {
     [Parameter]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     private Book? product;
     private bool isLoading = true;

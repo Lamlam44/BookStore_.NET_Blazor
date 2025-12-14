@@ -165,6 +165,12 @@
 
     private async Task CreateCustomer()
     {
+        if (string.IsNullOrWhiteSpace(newCustomer.Name) || string.IsNullOrWhiteSpace(newCustomer.Phone))
+        {
+            formMessage = "Tên và số điện thoại không được để trống.";
+            return;
+        }
+
         var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn thêm khách hàng này?");
         if (!ok) return;
 
