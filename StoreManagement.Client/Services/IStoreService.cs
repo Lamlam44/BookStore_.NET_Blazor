@@ -57,12 +57,6 @@ namespace StoreManagement.Client.Services
         Task<bool> CreatePublisherAsync(Publisher publisher);
         Task<bool> UpdatePublisherAsync(Publisher publisher);
         Task<bool> DeletePublisherAsync(string id);
-
-        // ==========================================
-        // 7. KHÁCH HÀNG (CUSTOMERS)
-        // ==========================================
-        Task<List<Customer>> GetCustomersAsync();
-        Task CreateCustomerAsync(Customer customer);
         
         // Overload hỗ trợ phân trang & tạo nhanh
         Task<ApiResponse<PaginationResponse<Customer>>> GetCustomersAsync(int pageNumber, int pageSize);

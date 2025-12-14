@@ -230,56 +230,7 @@ namespace StoreManagement.Client.Services
                 return null;
             }
         }
-        // ==========================================
-        // 5. HÓA ĐƠN & BÁN HÀNG (INVOICES & POS) - BỔ SUNG LẠI
-        // ==========================================
-        
-        public async Task<List<Invoice>> GetInvoicesAsync()
-        {
-            try
-            {
-                try 
-                {
-                    var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Invoice>>>("api/invoices");
-                    return response?.Data?.Items ?? new List<Invoice>();
-                }
-                catch
-                {
-                    return await _http.GetFromJsonAsync<List<Invoice>>("api/invoices") ?? new List<Invoice>();
-                }
-            }
-            catch { return new List<Invoice>(); }
-        }
 
-        public async Task<Invoice?> GetInvoiceByIdAsync(string id)
-        {
-            try
-            {
-                try 
-                {
-                     var response = await _http.GetFromJsonAsync<ApiResponse<Invoice>>($"api/invoices/{id}");
-                     return response?.Data;
-                }
-                catch 
-                {
-                     return await _http.GetFromJsonAsync<Invoice>($"api/invoices/{id}");
-                }
-            }
-            catch { return null; }
-        }
-        
-        // Alias
-        public async Task<Invoice?> GetInvoiceDetailAsync(string id) => await GetInvoiceByIdAsync(id);
-
-        public async Task<bool> CreateInvoiceAsync(CreateInvoiceRequest request)
-        {
-            try 
-            {
-                var response = await _http.PostAsJsonAsync("api/invoices", request);
-                return response.IsSuccessStatusCode;
-            }
-            catch { return false; }
-        }
 
         // ==========================================
         // 6. CUSTOMERS (KHÁCH HÀNG)
