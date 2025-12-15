@@ -67,7 +67,7 @@
         font-size: 1rem;
         font-weight: 700;
         color: #2c3e50;
-        margin-bottom: 2px; /* Giảm khoảng cách để gần tác giả hơn */
+        margin-bottom: 2px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -78,7 +78,7 @@
     
     .book-author {
         font-size: 0.85rem;
-        color: #6c757d; /* Đồng bộ màu xám với trang Products */
+        color: #6c757d;
         margin-bottom: 10px;
         white-space: nowrap; 
         overflow: hidden;
@@ -91,36 +91,14 @@
         font-weight: 800;
     }
 
-    /* Nút hành động (Hover trên desktop) */
-    .action-btn-group {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: all 0.3s ease;
-        position: absolute;
-        bottom: 15px;
-        left: 0;
-        right: 0;
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        padding: 0 15px;
+    /* Style nút bấm giống trang Products */
+    .btn-detail {
+        background-color: #f1f3f5;
+        color: #495057;
+        font-weight: 600;
+        border: none;
     }
-
-    /* Trên mobile hiện luôn nút */
-    @@media (max-width: 768px) {
-        .action-btn-group {
-            opacity: 1;
-            transform: translateY(0);
-            position: static;
-            margin-top: 10px;
-        }
-        .book-image-container { height: 180px; padding: 10px; }
-    }
-
-    .book-card:hover .action-btn-group {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    .btn-detail:hover { background-color: #e9ecef; color: #000; }
 </style>
 
 <div class="container py-4">
@@ -190,7 +168,7 @@
             @foreach (var item in books)
             {
                 <div class="col">
-                    <div class="book-card shadow-sm">
+                    <div class="book-card shadow-sm h-100 d-flex flex-column">
                         
                         @* Ảnh sản phẩm *@
                         <div class="book-image-container cursor-pointer" @onclick="() => NavigateToDetail(item.Id)">
@@ -198,28 +176,12 @@
                                  class="book-img" 
                                  alt="@item.Title"
                                  onerror="this.src='/images/no-image.svg'" />
-                            
-                            @* Nút Hover (Trên Desktop) *@
-                            <div class="action-btn-group d-none d-md-flex">
-                                <button class="btn btn-light rounded-circle shadow-sm text-primary" 
-                                        title="Xem chi tiết" 
-                                        @onclick:stopPropagation="true" 
-                                        @onclick="() => NavigateToDetail(item.Id)">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="btn btn-danger rounded-circle shadow-sm" 
-                                        title="Thêm vào giỏ"
-                                        @onclick:stopPropagation="true" 
-                                        @onclick="() => AddToCart(item)">
-                                    <i class="bi bi-cart-plus"></i>
-                                </button>
-                            </div>
                         </div>
 
                         @* Thông tin *@
-                        <div class="card-body-custom">
+                        <div class="card-body-custom pt-0 pb-0">
                             @* Tiêu đề *@
-                            <div class="book-title" title="@item.Title">
+                            <div class="book-title mt-2" title="@item.Title">
                                 <a href="/products/@item.Id" class="text-decoration-none text-dark stretched-link">@item.Title</a>
                             </div>
                             
@@ -229,17 +191,26 @@
                                 @(string.IsNullOrEmpty(item.Author) ? "Đang cập nhật" : item.Author)
                             </div>
 
-                            @* Giá & Nút Mobile *@
-                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                            @* Giá *@
+                            <div class="mt-auto d-flex justify-content-between align-items-center mb-2">
                                 <span class="price-tag">@item.RetailPrice.ToString("N0") đ</span>
-                                
-                                <button class="btn btn-sm btn-outline-danger rounded-circle d-md-none border-0 bg-light"
-                                        style="width: 32px; height: 32px;"
-                                        @onclick:stopPropagation="true" 
-                                        @onclick="() => AddToCart(item)">
-                                    <i class="bi bi-cart-plus-fill"></i>
-                                </button>
                             </div>
+                        </div>
+
+                        @* --- FOOTER CARD (GIỐNG TRANG PRODUCTS) --- *@
+                        <div class="card-footer bg-white border-top-0 d-flex gap-2 pb-3 px-3 mt-auto">
+                            <button class="btn btn-detail rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+                                    style="width: 40px; height: 40px; z-index: 2; position: relative;" 
+                                    title="Xem chi tiết"
+                                    @onclick="() => NavigateToDetail(item.Id)">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                            <button class="btn btn-danger flex-grow-1 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                                    style="position: relative; z-index: 2;"
+                                    @onclick:stopPropagation="true" 
+                                    @onclick="() => AddToCart(item)">
+                                <i class="bi bi-cart-plus-fill"></i> Thêm
+                            </button>
                         </div>
                     </div>
                 </div>
