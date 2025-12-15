@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthProvider
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
 
 <h3>Checkout</h3>
 
@@ -60,6 +61,39 @@ else
             </div>
         </div>
 
+        <div class="card mb-3">
+            <div class="card-header bg-light">Áp dụng khuyến mãi</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-8 position-relative">
+                        <label class="form-label">Nhập mã giảm giá</label>
+                        <input class="form-control" placeholder="VD: SUMMER-2025" @bind="voucherInput" @oninput="OnVoucherInput" />
+                        @if (voucherSuggestions.Any())
+                        {
+                            <ul class="list-group position-absolute w-100" style="z-index:3000; max-height:220px; overflow:auto;">
+                                @foreach (var v in voucherSuggestions)
+                                {
+                                    <li class="list-group-item list-group-item-action d-flex justify-content-between" @onclick="() => SelectVoucher(v)">
+                                        <span><strong>@v.VoucherCode</strong> — @v.VoucherName</span>
+                                        <small class="text-muted">@(v.VoucherType == "Percentage" ? $"-{v.DiscountValue}%" : $"-{v.DiscountValue:N0} đ")</small>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-warning w-100" @onclick="ApplyVoucher" disabled="@isSubmitting">Áp dụng</button>
+                    </div>
+                </div>
+                @if (appliedVoucher != null)
+                {
+                    <div class="alert alert-success mt-3 mb-0">
+                        Đã áp dụng: <strong>@appliedVoucher.VoucherCode</strong> — @appliedVoucher.VoucherName. Số tiền giảm: <strong>@appliedDiscountDisplay</strong>
+                    </div>
+                }
+            </div>
+        </div>
+
         <h5>Chi tiết đơn hàng</h5>
         <table class="table table-striped table-bordered">
             <thead>
@@ -79,7 +113,9 @@ else
         </table>
 
         <div class="mb-3 text-end">
-            <strong>Tổng cộng: @cartItems.Sum(i => i.Price * i.Quantity).ToString("C")</strong>
+            <div>Tạm tính: <strong>@Subtotal.ToString("C")</strong></div>
+            <div>Giảm giá: <strong class="text-danger">-@AppliedDiscount.ToString("C")</strong></div>
+            <div>Tổng thanh toán: <strong class="fs-5">@TotalAfterDiscount.ToString("C")</strong></div>
         </div>
 
         <div class="d-flex align-items-center">
@@ -103,24 +139,170 @@ else
 
     private PlaceOrderModel orderModel = new PlaceOrderModel { PaymentMethod = "CASH", OrderType = "ONLINE" };
     private bool isSubmitting = false;
+    private bool submissionGuard = false;
     private string? submitError;
+
+    // Voucher state
+    private string voucherInput = string.Empty;
+    private List<Models.Voucher> voucherSuggestions = new();
+    private Models.Voucher? appliedVoucher;
+    private decimal appliedDiscount = 0m;
+    private string appliedDiscountDisplay => AppliedDiscount.ToString("C");
+
+    private decimal Subtotal => cartItems.Sum(i => i.Price * i.Quantity);
+    private decimal AppliedDiscount => Math.Clamp(appliedDiscount, 0, Subtotal);
+    private decimal TotalAfterDiscount => Subtotal - AppliedDiscount;
+
+    // Cache from admin vouchers page to know targets
+    private Dictionary<string, VoucherDisplayInfo>? voucherDisplayCache;
+    private class VoucherDisplayInfo
+    {
+        public string VoucherType { get; set; } = "Percentage";
+        public decimal DiscountValue { get; set; }
+        public string TargetType { get; set; } = "PRODUCT_TARGET";
+        public List<string> TargetNames { get; set; } = new();
+        public List<string> TargetIds { get; set; } = new();
+    }
+    private List<Book> allBooks = new();
 
     protected override void OnInitialized()
     {
         cartItems = CartService.GetCartItems();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Preload cache and book catalog for category checks
+            try
+            {
+                var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "voucherDisplayCache");
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    voucherDisplayCache = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, VoucherDisplayInfo>>(json);
+                }
+            }
+            catch { }
+            try
+            {
+                allBooks = await StoreService.GetBooksAsync();
+            }
+            catch { }
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnVoucherInput(ChangeEventArgs e)
+    {
+        voucherInput = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(voucherInput) || voucherInput.Trim().Length < 2)
+        {
+            voucherSuggestions.Clear();
+            return;
+        }
+
+        var all = await StoreService.GetVouchersAsync();
+        voucherSuggestions = all
+            .Where(v => !string.IsNullOrWhiteSpace(v.VoucherCode) && v.VoucherCode.Contains(voucherInput.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Take(15)
+            .ToList();
+    }
+
+    private void SelectVoucher(Models.Voucher v)
+    {
+        voucherInput = v.VoucherCode;
+        appliedVoucher = v;
+        voucherSuggestions.Clear();
+    }
+
+    private Task ApplyVoucher()
+    {
+        if (appliedVoucher == null)
+        {
+            appliedDiscount = 0m;
+            return Task.CompletedTask;
+        }
+
+        // Compute eligible items based on admin-defined targets (from localStorage)
+        var eligibleQuantity = 0;
+        var eligibleSubtotal = 0m;
+        if (voucherDisplayCache != null && !string.IsNullOrWhiteSpace(appliedVoucher.VoucherCode)
+            && voucherDisplayCache.TryGetValue(appliedVoucher.VoucherCode, out var info)
+            && info.TargetIds.Any())
+        {
+            if (string.Equals(info.TargetType, "PRODUCT_TARGET", StringComparison.OrdinalIgnoreCase))
+            {
+                var eligibleIds = new HashSet<string>(info.TargetIds);
+                foreach (var ci in cartItems)
+                {
+                    if (!string.IsNullOrWhiteSpace(ci.ProductId) && eligibleIds.Contains(ci.ProductId))
+                    {
+                        eligibleQuantity += ci.Quantity;
+                        eligibleSubtotal += ci.Price * ci.Quantity;
+                    }
+                }
+            }
+            else // CATEGORY_TARGET
+            {
+                var eligibleCatIds = new HashSet<string>(info.TargetIds);
+                // Map productId -> categoryId from catalog
+                var categoryByProduct = allBooks.Where(b => !string.IsNullOrWhiteSpace(b.Id))
+                    .ToDictionary(b => b.Id!, b => b.CategoryId ?? string.Empty);
+                foreach (var ci in cartItems)
+                {
+                    if (!string.IsNullOrWhiteSpace(ci.ProductId)
+                        && categoryByProduct.TryGetValue(ci.ProductId, out var catId)
+                        && !string.IsNullOrWhiteSpace(catId)
+                        && eligibleCatIds.Contains(catId))
+                    {
+                        eligibleQuantity += ci.Quantity;
+                        eligibleSubtotal += ci.Price * ci.Quantity;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // No target info: treat nothing as eligible (safer than applying to all)
+            eligibleQuantity = 0;
+            eligibleSubtotal = 0m;
+        }
+
+        if (appliedVoucher.VoucherType == "Percentage")
+        {
+            appliedDiscount = Math.Round(eligibleSubtotal * (appliedVoucher.DiscountValue / 100m), 0, MidpointRounding.AwayFromZero);
+        }
+        else
+        {
+            // Fixed (VNĐ) discounts apply per eligible item in cart
+            var totalFixed = appliedVoucher.DiscountValue * eligibleQuantity;
+            appliedDiscount = Math.Min(totalFixed, eligibleSubtotal);
+        }
+        return Task.CompletedTask;
+    }
+
     private async Task PlaceOrder()
     {
+        if (submissionGuard) return; // prevent double submissions
+        submissionGuard = true;
         submitError = null;
         isSubmitting = true;
+
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc chắn xác nhận thanh toán?");
+        if (!confirm)
+        {
+            isSubmitting = false;
+            submissionGuard = false;
+            return;
+        }
 
         // Check authentication: guests get a client-only confirmation, authenticated users persist to server
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
 
         // Build request payload (same shape for server persistence)
-        var totalAmount = cartItems.Sum(i => i.Price * i.Quantity);
+        var totalAmount = TotalAfterDiscount;
 
         var request = new Models.CreateInvoiceRequest
         {
@@ -135,8 +317,8 @@ else
             PaymentStatus = "PAID",
             Status = "PENDING",
             AmountPaid = totalAmount,
-            DiscountAmount = 0,
-            VoucherId = null,
+            DiscountAmount = AppliedDiscount,
+            VoucherId = appliedVoucher?.Id,
             Details = cartItems.Select(i => new Models.InvoiceDetailDto
             {
                 BookId = i.ProductId,
@@ -176,6 +358,7 @@ else
                 }
 
                 CartService.Clear();
+                await JSRuntime.InvokeVoidAsync("alert", "Thanh toán thành công!");
                 Navigation.NavigateTo("/");
                 return;
             }
@@ -185,6 +368,7 @@ else
             if (okAuth)
             {
                 CartService.Clear();
+                await JSRuntime.InvokeVoidAsync("alert", "Thanh toán thành công!");
                 Navigation.NavigateTo("/");
             }
             else
@@ -199,6 +383,7 @@ else
         finally
         {
             isSubmitting = false;
+            submissionGuard = false;
         }
     }
 

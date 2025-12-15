@@ -196,11 +196,8 @@
 
     private void CalculateTotal()
     {
+        // Total should be raw cart sum; backend handles voucher
         totalAmount = cart.Sum(i => i.Price * i.Quantity);
-        if (appliedVoucher != null)
-        {
-            totalAmount -= appliedVoucher.DiscountValue;
-        }
     }
 
     private async Task Pay()

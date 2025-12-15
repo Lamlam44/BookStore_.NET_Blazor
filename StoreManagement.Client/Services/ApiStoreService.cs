@@ -104,9 +104,11 @@ namespace StoreManagement.Client.Services
         {
             try
             {
-                var url = $"api/vouchers/search?Code={code}&PageNumber=1&PageSize=1";
+                // Use Query param for consistency and URL-encode the code
+                var encoded = System.Net.WebUtility.UrlEncode(code);
+                var url = $"api/vouchers/search?Query={encoded}&PageNumber=1&PageSize=10";
                 var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<Voucher>>>(url);
-                return response?.Data?.Items?.FirstOrDefault();
+                return response?.Data?.Items?.FirstOrDefault(v => string.Equals(v.VoucherCode, code, StringComparison.OrdinalIgnoreCase));
             }
             catch { return null; }
         }

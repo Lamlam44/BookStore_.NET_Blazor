@@ -3,6 +3,7 @@
 @using StoreManagement.Client.Models
 @inject StoreManagement.Client.Services.ApiService ApiService
 @inject StoreManagement.Client.Services.CartService CartService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Trang chủ bán sách</PageTitle>
 
@@ -47,7 +48,7 @@
                         </div>
                         
                         <div class="card-footer bg-white border-top-0 pb-3">
-                            <button class="btn btn-primary w-100 rounded-pill fw-bold">
+                            <button class="btn btn-primary w-100 rounded-pill fw-bold" @onclick="() => AddToCart(item)">
                                 <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ
                             </button>
                         </div>
@@ -97,5 +98,46 @@
     private void AddToCart(Book b)
     {
         CartService.AddToCart(b);
+        ShowToast("Đã thêm vào giỏ hàng", $"{b.Title}");
+    }
+
+    private void ShowToast(string title, string message)
+    {
+        var id = $"toast-{Guid.NewGuid():N}";
+        var containerId = "toast-container";
+        var script = $@"
+            (function() {{
+                let container = document.getElementById('{containerId}');
+                if (!container) {{
+                    container = document.createElement('div');
+                    container.id = '{containerId}';
+                    container.style.position = 'fixed';
+                    container.style.top = '20px';
+                    container.style.right = '20px';
+                    container.style.zIndex = '5000';
+                    document.body.appendChild(container);
+                }}
+                const el = document.createElement('div');
+                el.id = '{id}';
+                el.style.background = '#198754';
+                el.style.color = '#fff';
+                el.style.padding = '10px 14px';
+                el.style.marginBottom = '8px';
+                el.style.borderRadius = '8px';
+                el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                el.style.fontSize = '14px';
+                el.style.maxWidth = '340px';
+                el.style.pointerEvents = 'none';
+                el.innerHTML = `<strong>${title}</strong><div style='font-size:12px;opacity:.9;'>${message}</div>`;
+                container.appendChild(el);
+                setTimeout(() => {{
+                    el.style.transition = 'opacity .3s ease';
+                    el.style.opacity = '0';
+                    setTimeout(() => {{ el.remove(); }}, 300);
+                }}, 1800);
+            }})();
+        ";
+        // Use JS interop to inject toast (defer to global eval via Blazor)
+        _ = JSRuntime.InvokeVoidAsync("eval", script);
     }
 }

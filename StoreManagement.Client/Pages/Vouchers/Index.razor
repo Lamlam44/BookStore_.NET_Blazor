@@ -29,7 +29,7 @@
     .modern-input:focus { border-color: #f6c23e; box-shadow: 0 0 0 0.2rem rgba(246, 194, 62, 0.25); }
 
     /* SUGGESTION LIST */
-    .suggestion-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 10px rgba(0,0,0,0.1); list-style: none; padding: 0; margin: 0; }
+    .suggestion-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 3000; box-shadow: 0 4px 10px rgba(0,0,0,0.1); list-style: none; padding: 0; margin: 0; }
     .suggestion-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
     .suggestion-item:hover { background-color: #f8f9fc; color: #4e73df; }
 
@@ -95,12 +95,13 @@
                             <td>
                                 <div class="fw-bold text-dark">@v.VoucherName</div>
                                 <small class="text-muted" style="font-size: 0.8rem;">
-                                    @(v.VoucherType == "Percentage" ? "Giảm theo %" : "Giảm tiền mặt")
+                                    @GetDisplayVoucherType(v)
                                 </small>
+                                @RenderTargetPreview(v)
                             </td>
                             <td class="text-end">
                                 <span class="fw-bold text-danger" style="font-size: 1.1rem;">
-                                    @(v.VoucherType == "Percentage" ? $"-{v.DiscountValue}%" : $"-{v.DiscountValue:N0} đ")
+                                    @GetDisplayDiscountValue(v)
                                 </span>
                             </td>
                             <td class="text-center small text-muted">
@@ -280,15 +281,30 @@
 
     // --- Biến Target ---
     private List<Book> suggestedBooks = new();
+    private List<Book> allBooks = new();
     private List<Category> allCategories = new();
     private List<string> selectedTargetIds = new();
     private List<string> selectedTargetNames = new();
     private string targetSearchTerm = "";
     private string selectedTargetType = "PRODUCT_TARGET"; 
 
+    // --- Cache override/display info by VoucherCode ---
+    private class VoucherDisplayInfo
+    {
+        public string VoucherType { get; set; } = "Percentage";
+        public decimal DiscountValue { get; set; }
+        public string TargetType { get; set; } = "PRODUCT_TARGET";
+        public List<string> TargetNames { get; set; } = new();
+        public List<string> TargetIds { get; set; } = new();
+    }
+    private Dictionary<string, VoucherDisplayInfo> voucherDisplayCache = new();
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadDisplayCacheAsync();
         await LoadData();
+        // Preload books for local search fallback
+        allBooks = await StoreService.GetBooksAsync();
     }
     private async Task SearchData()
     {
@@ -302,6 +318,29 @@
         }
     }
     private async Task LoadData() => vouchers = await StoreService.GetVouchersAsync();
+    private const string DisplayCacheKey = "voucherDisplayCache";
+    private async Task LoadDisplayCacheAsync()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", DisplayCacheKey);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, VoucherDisplayInfo>>(json);
+                if (data != null) voucherDisplayCache = data;
+            }
+        }
+        catch { }
+    }
+    private async Task SaveDisplayCacheAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(voucherDisplayCache);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", DisplayCacheKey, json);
+        }
+        catch { }
+    }
 
     // --- LOGIC LỌC TẠI CLIENT (Mượt mà, không cần gọi API Search) ---
     private IEnumerable<Voucher> VisibleVouchers
@@ -332,6 +371,8 @@
         selectedTargetType = "PRODUCT_TARGET";
         
         allCategories = await StoreService.GetAllCategoriesAsync();
+        if (allBooks == null || allBooks.Count == 0)
+            allBooks = await StoreService.GetBooksAsync();
         
         showForm = true;
         StateHasChanged();
@@ -349,6 +390,18 @@
         selectedTargetIds.Clear();
         selectedTargetNames.Clear();
         allCategories = await StoreService.GetAllCategoriesAsync();
+        if (allBooks == null || allBooks.Count == 0)
+            allBooks = await StoreService.GetBooksAsync();
+
+        // Load any cached target/type to reflect previously chosen scope and type
+        if (!string.IsNullOrWhiteSpace(v.VoucherCode) && voucherDisplayCache.TryGetValue(v.VoucherCode, out var info))
+        {
+            selectedTargetType = info.TargetType;
+            selectedTargetNames = new List<string>(info.TargetNames);
+            selectedTargetIds = new List<string>(info.TargetIds);
+            currentVoucher.VoucherType = info.VoucherType;
+            currentVoucher.DiscountValue = info.DiscountValue;
+        }
 
         showForm = true;
         StateHasChanged();
@@ -370,11 +423,35 @@
 
     private async Task OnSearchTargetInput(ChangeEventArgs e)
     {
-        targetSearchTerm = e.Value?.ToString() ?? "";
-        if (targetSearchTerm.Length > 1) 
-            suggestedBooks = await StoreService.SearchBooksAsync(targetSearchTerm);
-        else
+        targetSearchTerm = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(targetSearchTerm) || targetSearchTerm.Trim().Length < 2)
+        {
             suggestedBooks.Clear();
+            return;
+        }
+
+        var term = targetSearchTerm.Trim();
+        var local = allBooks
+            .Where(b => !string.IsNullOrWhiteSpace(b.Title) && b.Title.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .Take(20)
+            .ToList();
+
+        try
+        {
+            var remote = await StoreService.SearchBooksAsync(term) ?? new List<Book>();
+            // Merge by Id
+            var merged = local.Concat(remote)
+                .Where(b => b != null && !string.IsNullOrWhiteSpace(b.Id))
+                .GroupBy(b => b.Id)
+                .Select(g => g.First())
+                .Take(20)
+                .ToList();
+            suggestedBooks = merged;
+        }
+        catch
+        {
+            suggestedBooks = local;
+        }
     }
 
     private void SelectBook(Book book)
@@ -426,9 +503,59 @@
         {
             await StoreService.UpdateVoucherAsync(currentVoucher);
         }
+
+        // Update local display cache so reopen shows correct type/targets
+        if (!string.IsNullOrWhiteSpace(currentVoucher.VoucherCode))
+        {
+            voucherDisplayCache[currentVoucher.VoucherCode] = new VoucherDisplayInfo
+            {
+                VoucherType = currentVoucher.VoucherType,
+                DiscountValue = currentVoucher.DiscountValue,
+                TargetType = selectedTargetType,
+                TargetNames = new List<string>(selectedTargetNames),
+                TargetIds = new List<string>(selectedTargetIds)
+            };
+        }
+        await SaveDisplayCacheAsync();
         
         showForm = false;
         await LoadData();
+    }
+
+    // --- Helpers for display overrides ---
+    private string GetDisplayVoucherType(Voucher v)
+    {
+        var type = v.VoucherType;
+        if (!string.IsNullOrWhiteSpace(v.VoucherCode) && voucherDisplayCache.TryGetValue(v.VoucherCode, out var info))
+            type = info.VoucherType;
+        return type == "Percentage" ? "Giảm theo %" : "Giảm tiền mặt";
+    }
+
+    private RenderFragment RenderTargetPreview(Voucher v) => builder =>
+    {
+        if (string.IsNullOrWhiteSpace(v.VoucherCode) || !voucherDisplayCache.TryGetValue(v.VoucherCode, out var info)) return;
+        var idx = 0;
+        builder.OpenElement(idx++, "div");
+        builder.AddAttribute(idx++, "class", "mt-1");
+        builder.OpenElement(idx++, "small");
+        builder.AddAttribute(idx++, "class", "text-muted");
+        var prefix = info.TargetType == "CATEGORY_TARGET" ? "Danh mục:" : "Sản phẩm:";
+        var names = info.TargetNames.Any() ? string.Join(", ", info.TargetNames.Take(3)) + (info.TargetNames.Count > 3 ? "…" : "") : "(Chưa chọn)";
+        builder.AddContent(idx++, $"{prefix} {names}");
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private string GetDisplayDiscountValue(Voucher v)
+    {
+        var type = v.VoucherType;
+        var value = v.DiscountValue;
+        if (!string.IsNullOrWhiteSpace(v.VoucherCode) && voucherDisplayCache.TryGetValue(v.VoucherCode, out var info))
+        {
+            type = info.VoucherType;
+            value = info.DiscountValue;
+        }
+        return type == "Percentage" ? $"-{value}%" : $"-{value:N0} đ";
     }
 
     private static string GenerateCodeFromName(string? name, string prefix)
