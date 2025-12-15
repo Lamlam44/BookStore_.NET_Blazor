@@ -304,6 +304,7 @@ namespace StoreManagement.Client.Services
             }
              catch (Exception ex) { return new ApiResponse<bool> { Success = false, Message = ex.Message }; }
         }
+
         public async Task<Customer?> CreateCustomerAndGetAsync(string name, string phone, string address)
         {
             try
@@ -314,7 +315,6 @@ namespace StoreManagement.Client.Services
                 {
                     return null;
                 }
-
                 var created = await response.Content.ReadFromJsonAsync<ApiResponse<Customer>>();
                 return created?.Data;
             }
@@ -453,13 +453,21 @@ namespace StoreManagement.Client.Services
         {
             try
             {
+                // Gọi endpoint tạo đơn hàng Online
                 var response = await _http.PostAsJsonAsync("api/orders/online", request);
-                if (!response.IsSuccessStatusCode) return false;
-                // We don't need the payload to proceed; acknowledge success
+                
+                if (!response.IsSuccessStatusCode) 
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"CreateOnlineInvoiceAsync Error: {error}");
+                    return false;
+                }
+                
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"CreateOnlineInvoiceAsync Exception: {ex.Message}");
                 return false;
             }
         }

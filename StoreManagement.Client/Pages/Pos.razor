@@ -139,7 +139,8 @@
                     ProductId = product.Id,
                     ProductName = product.Title,
                     Quantity = 1,
-                    Price = product.RetailPrice
+                    Price = product.RetailPrice,
+                    Image = product.Image
                 });
         }
         CalculateTotal();
@@ -200,7 +201,7 @@
         totalAmount = cart.Sum(i => i.Price * i.Quantity);
     }
 
-    private async Task Pay()
+private async Task Pay()
     {
         if (!cart.Any())
         {
@@ -208,38 +209,49 @@
             return;
         }
 
-        var request = new Models.CreateInvoiceRequest
+        // Gộp sản phẩm trùng nhau để an toàn (giống bên Checkout)
+        var orderDetails = cart
+            .GroupBy(i => i.ProductId)
+            .Select(g => new Models.InvoiceDetailDto
             {
-                OrderType = "POS",
-                PaymentMethod = paymentMethod,
-                PaymentStatus = "PAID",
-                Status = "DELIVERED",
-                CustomerId = selectedCustomer?.Id,
-                VoucherId = appliedVoucher?.Id,
-                AmountPaid = totalAmount,
-                Details = cart.Select(i => new Models.InvoiceDetailDto
-                {
-                    BookId = i.ProductId,
-                    Quantity = i.Quantity,
-                    TotalDiscount = 0 // Assuming no discount per item for now
-                }).ToList()
-            };
+                BookId = g.Key,
+                Quantity = g.Sum(i => i.Quantity),
+                TotalDiscount = 0
+            }).ToList();
+
+        var request = new Models.CreateInvoiceRequest
+        {
+            OrderType = "POS",
+            PaymentMethod = paymentMethod,
+            
+            // --- SỬA LẠI THÀNH PENDING ĐỂ TRỪ KHO 1 LẦN ---
+            PaymentStatus = "PENDING", 
+            Status = "PENDING",
+            // ----------------------------------------------
+            
+            CustomerId = selectedCustomer?.Id,
+            VoucherId = appliedVoucher?.Id,
+            AmountPaid = totalAmount,
+            Details = orderDetails
+        };
 
         var invoice = await StoreService.CreateInvoiceAsync(request);
+        
         if (invoice != null)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Thanh toán POS thành công.");
+            await JSRuntime.InvokeVoidAsync("alert", "Thanh toán POS thành công!");
+            
+            // Reset lại giao diện POS để bán đơn tiếp theo
             cart.Clear();
             selectedCustomer = null;
             appliedVoucher = null;
             voucherCode = "";
             customerPhone = "";
             CalculateTotal();
-            // Giữ nguyên trang POS, không điều hướng
         }
         else
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Failed to create invoice. API may be missing or there was an error.");
+            await JSRuntime.InvokeVoidAsync("alert", "Lỗi tạo hóa đơn POS.");
         }
     }
 }

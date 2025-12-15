@@ -1,34 +1,184 @@
 @page "/products/{Id}"
 @layout StoreManagement.Client.Layout.CustomerLayout
+@using StoreManagement.Client.Models
 @inject StoreManagement.Client.Services.ApiService ApiService
 @inject StoreManagement.Client.Services.CartService CartService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
-<h3>Product Detail</h3>
+<PageTitle>@(product?.Title ?? "Chi tiết sách") | BookStore</PageTitle>
 
-@if (isLoading)
-{
-    <p><em>Loading...</em></p>
-}
-else if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger">@errorMessage</div>
-}
-else if (product != null)
-{
-    <div class="row">
-        <div class="col-md-4">
-            <img src="@product.Image" class="img-fluid" alt="@product.Title" />
+<style>
+    .product-detail-container { padding-bottom: 80px; }
+    
+    /* Khung ảnh sản phẩm */
+    .product-image-box {
+        background-color: #fff;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        padding: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        height: 100%; /* Đảm bảo chiều cao full cột */
+        min-height: 400px;
+    }
+    .product-main-img {
+        max-width: 100%;
+        max-height: 450px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+        transition: transform 0.5s ease;
+    }
+    .product-image-box:hover .product-main-img {
+        transform: scale(1.05);
+    }
+
+    /* Phần thông tin */
+    .product-title { font-size: 1.8rem; font-weight: 700; color: #2c3e50; line-height: 1.3; }
+    .product-price { font-size: 2.2rem; font-weight: 800; color: #dc3545; }
+    
+    .meta-label { color: #6c757d; font-weight: 500; width: 120px; display: inline-block; }
+    .meta-value { color: #212529; font-weight: 600; }
+    
+    /* Badge trạng thái kho */
+    .stock-badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .stock-badge.out-stock {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+</style>
+
+<div class="container product-detail-container pt-4">
+    
+    @* --- BREADCRUMB (Điều hướng) --- *@
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="/products" class="text-decoration-none text-muted">Sách</a></li>
+            <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">@(product?.Title ?? "Chi tiết")</li>
+        </ol>
+    </nav>
+
+    @if (isLoading)
+    {
+        @* --- SKELETON LOADING (Hiệu ứng khi đang tải) --- *@
+        <div class="row g-5">
+            <div class="col-md-5">
+                <div class="placeholder-glow">
+                    <div class="placeholder col-12 rounded-3" style="height: 450px; background-color: #e9ecef;"></div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="placeholder-glow">
+                    <span class="placeholder col-12 mb-2 h1 rounded"></span>
+                    <span class="placeholder col-8 mb-4 h1 rounded"></span>
+                    <div class="my-4"><span class="placeholder col-4 h2 rounded"></span></div>
+                    <span class="placeholder col-12 mb-2 rounded"></span>
+                    <span class="placeholder col-12 mb-2 rounded"></span>
+                    <span class="placeholder col-6 rounded"></span>
+                </div>
+            </div>
         </div>
-        <div class="col-md-8">
-                <h4>@product.Title</h4>
-                <p><strong>ISBN:</strong> @product.Isbn</p>
-                <p><strong>Price:</strong> @product.RetailPrice.ToString("C")</p>
-            <button class="btn btn-primary" @onclick="() => AddToCart(product)">Add to Cart</button>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage) || product == null)
+    {
+        <div class="alert alert-danger text-center shadow-sm rounded-3 py-5">
+            <i class="bi bi-exclamation-triangle-fill fs-1 mb-3 text-danger"></i>
+            <h4>Không tìm thấy sản phẩm</h4>
+            <p>Sản phẩm này có thể đã bị xóa hoặc đường dẫn không đúng.</p>
+            <a href="/" class="btn btn-outline-danger mt-2">Về trang chủ</a>
         </div>
-    </div>
-}
+    }
+    else
+    {
+        <div class="row g-5">
+            @* --- CỘT TRÁI: ẢNH SẢN PHẨM --- *@
+            <div class="col-md-5">
+                <div class="product-image-box shadow-sm">
+                    <img src="@(string.IsNullOrEmpty(product.Image) ? "/images/no-image.svg" : product.Image)" 
+                         class="product-main-img" 
+                         alt="@product.Title"
+                         onerror="this.src='/images/no-image.svg'" />
+                </div>
+            </div>
+
+            @* --- CỘT PHẢI: THÔNG TIN CHI TIẾT --- *@
+            <div class="col-md-7">
+                <h1 class="product-title mb-4">@product.Title</h1>
+                
+                @* Hộp giá tiền *@
+                <div class="p-4 bg-light rounded-3 mb-4 border border-light shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-2">Giá bán:</span>
+                        <span class="product-price">@product.RetailPrice.ToString("N0") đ</span>
+                    </div>
+                </div>
+
+                @* Bảng thông tin chi tiết *@
+                <div class="mb-5 ps-2">
+                    <div class="mb-3">
+                        <span class="meta-label">Tác giả:</span>
+                        <span class="meta-value text-primary fs-5">
+                            @(string.IsNullOrEmpty(product.Author) ? "Đang cập nhật" : product.Author)
+                        </span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="meta-label">Nhà xuất bản:</span>
+                        <span class="meta-value">
+                            @(string.IsNullOrEmpty(product.Publisher) ? "Đang cập nhật" : product.Publisher)
+                        </span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="meta-label">Danh mục:</span>
+                        <span class="meta-value">
+                            @(!string.IsNullOrEmpty(product.CategoryName) ? product.CategoryName : (product.Category?.CategoryName ?? "Chưa phân loại"))
+                        </span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="meta-label">Mã ISBN:</span>
+                        <span class="meta-value text-muted font-monospace">@product.Isbn</span>
+                    </div>
+                    <div class="mt-4">
+                        <span class="meta-label">Tình trạng:</span>
+                        @if (product.StockQuantity > 0)
+                        {
+                            <span class="stock-badge shadow-sm"><i class="bi bi-check-circle-fill"></i> Còn hàng (@product.StockQuantity)</span>
+                        }
+                        else
+                        {
+                            <span class="stock-badge out-stock shadow-sm"><i class="bi bi-x-circle-fill"></i> Hết hàng</span>
+                        }
+                    </div>
+                </div>
+
+                <hr class="text-muted opacity-25 my-4">
+
+                @* Nút Mua Hàng *@
+                <div class="d-flex gap-3">
+                    <button class="btn btn-danger btn-lg flex-grow-1 d-flex align-items-center justify-content-center gap-2 shadow" 
+                            style="height: 55px; font-weight: bold; text-transform: uppercase;"
+                            @onclick="() => AddToCart(product)"
+                            disabled="@(product.StockQuantity <= 0)">
+                        <i class="bi bi-cart-plus-fill fs-5"></i> Thêm vào giỏ hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter]
@@ -45,6 +195,7 @@ else if (product != null)
 
     private async Task LoadProduct()
     {
+        isLoading = true;
         try
         {
             var res = await ApiService.GetProductByIdAsync(Id);
@@ -54,7 +205,7 @@ else if (product != null)
             }
             else
             {
-                errorMessage = res.Message ?? "Product not found";
+                errorMessage = res.Message ?? "Không tìm thấy sản phẩm";
             }
         }
         catch (Exception ex)
@@ -67,15 +218,22 @@ else if (product != null)
         }
     }
 
-    private async void AddToCart(Book p)
+    private async Task AddToCart(Book p)
     {
+        if (p.StockQuantity <= 0)
+        {
+            await ShowToastAsync("Thông báo", "Sản phẩm này hiện đã hết hàng.");
+            return;
+        }
+
         CartService.AddToCart(p);
-        await ShowToastAsync("Đã thêm vào giỏ hàng", p.Title);
+        await ShowToastAsync("Thành công", $"Đã thêm '{p.Title}' vào giỏ hàng");
     }
 
     private async Task ShowToastAsync(string title, string message)
     {
-        var containerId = "toast-container";
+        var id = $"toast-{Guid.NewGuid():N}";
+        var containerId = "toast-container-custom";
         var script = $@"
             (function() {{
                 let container = document.getElementById('{containerId}');
@@ -83,28 +241,46 @@ else if (product != null)
                     container = document.createElement('div');
                     container.id = '{containerId}';
                     container.style.position = 'fixed';
-                    container.style.top = '20px';
+                    container.style.top = '80px'; 
                     container.style.right = '20px';
-                    container.style.zIndex = '5000';
+                    container.style.zIndex = '9999';
+                    container.style.display = 'flex';
+                    container.style.flexDirection = 'column';
+                    container.style.gap = '10px';
                     document.body.appendChild(container);
                 }}
                 const el = document.createElement('div');
-                el.style.background = '#198754';
-                el.style.color = '#fff';
-                el.style.padding = '10px 14px';
-                el.style.marginBottom = '8px';
+                el.id = '{id}';
+                el.style.background = '#fff';
+                el.style.color = '#333';
+                el.style.borderLeft = '5px solid #198754';
+                el.style.padding = '15px 20px';
                 el.style.borderRadius = '8px';
-                el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                el.style.boxShadow = '0 5px 15px rgba(0,0,0,0.15)';
                 el.style.fontSize = '14px';
-                el.style.maxWidth = '340px';
-                el.style.pointerEvents = 'none';
-                el.innerHTML = `<strong>${title}</strong><div style='font-size:12px;opacity:.9;'>${message}</div>`;
+                el.style.minWidth = '300px';
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                el.style.transition = 'all 0.3s ease';
+                el.innerHTML = `<div style='display:flex;align-items:center;gap:10px'>
+                                    <i class='bi bi-check-circle-fill' style='color:#198754;font-size:1.2rem'></i>
+                                    <div>
+                                        <div style='font-weight:700;margin-bottom:2px'>${title}</div>
+                                        <div style='color:#666;font-size:0.9rem'>${message}</div>
+                                    </div>
+                                </div>`;
                 container.appendChild(el);
+                
                 setTimeout(() => {{
-                    el.style.transition = 'opacity .3s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateX(0)';
+                }}, 10);
+
+                setTimeout(() => {{
                     el.style.opacity = '0';
+                    el.style.transform = 'translateX(20px)';
                     setTimeout(() => {{ el.remove(); }}, 300);
-                }}, 1800);
+                }}, 2500);
             }})();
         ";
         await JSRuntime.InvokeVoidAsync("eval", script);

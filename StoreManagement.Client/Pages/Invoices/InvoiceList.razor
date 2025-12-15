@@ -68,10 +68,14 @@ else
                             <a href="/admin/invoices/detail/@invoice.Id" class="btn btn-sm btn-info" title="Chi tiết">
                                 <i class="oi oi-eye"></i>
                             </a>
-                            @* Bỏ chức năng sửa hóa đơn *@
-                            <button @onclick="(() => OpenUpdateStatusModal(invoice.Id, invoice.Status, invoice.PaymentStatus))" class="btn btn-sm btn-secondary" title="Cập nhật Trạng thái">
-                                <i class="oi oi-arrow-circle-top"></i>
-                            </button>
+                            @if (invoice.Status != "CANCELLED" && invoice.Status != "DELIVERED")
+                            {
+                                <button @onclick="(() => OpenUpdateStatusModal(invoice.Id, invoice.Status, invoice.PaymentStatus))" 
+                                        class="btn btn-sm btn-secondary" 
+                                        title="Cập nhật Trạng thái">
+                                    <i class="oi oi-arrow-circle-top"></i>
+                                </button>
+                            }
                         </div>
                     </td>
                 </tr>
