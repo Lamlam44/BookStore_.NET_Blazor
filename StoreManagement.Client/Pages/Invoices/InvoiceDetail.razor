@@ -63,8 +63,8 @@ else
             <h6>Thông tin Nhân viên</h6>
             @if (invoice.Staff != null)
             {
-                <p><strong>Tên nhân viên:</strong> @invoice.Staff.Username</p>
-                <p><strong>Chức vụ:</strong> @invoice.Staff.PositionName</p>
+                <p><strong>Tên nhân viên:</strong> @(string.IsNullOrWhiteSpace(invoice.Staff.FullName) ? invoice.Staff.Username : invoice.Staff.FullName)</p>
+                <p><strong>Chức vụ:</strong> @(string.IsNullOrWhiteSpace(invoice.Staff.PositionName) ? (invoice.OrderType == "POS" ? "STAFF" : "N/A") : invoice.Staff.PositionName)</p>
             }
             else
             {

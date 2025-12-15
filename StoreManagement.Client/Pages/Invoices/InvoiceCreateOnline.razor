@@ -1,6 +1,7 @@
 @page "/admin/invoices/create-online"
 @layout AdminLayout
 @inject ApiService ApiService
+@using System.Linq
 @inject NavigationManager Navigation
 
 <h3 class="mb-4">Tạo Hóa đơn Trực tuyến</h3>
@@ -62,6 +63,24 @@
             <h5 class="mb-0">Chi tiết Sản phẩm</h5>
         </div>
         <div class="card-body">
+            <div class="mb-3 position-relative">
+                <label class="form-label">Tìm sản phẩm theo tên hoặc ID</label>
+                <InputText class="form-control" @bind-Value="productSearch" @oninput="OnProductSearch" placeholder="Nhập tên hoặc ID sản phẩm..." />
+                @if (suggestedProducts.Any())
+                {
+                    <ul class="list-group position-absolute w-100" style="z-index:1000; max-height:240px; overflow:auto;">
+                        @foreach (var p in suggestedProducts)
+                        {
+                            <li class="list-group-item list-group-item-action" @onclick="() => AddProductFromSuggestion(p)">
+                                <div class="d-flex justify-content-between">
+                                    <span>@p.Title</span>
+                                    <small class="text-muted">@p.Id</small>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
             @if (invoiceRequest.Details.Any())
             {
                 <table class="table table-bordered table-striped">
@@ -119,6 +138,8 @@
     private AdminCreateInvoiceRequest invoiceRequest = new() { OrderType = "ONLINE", Status = "Pending", PaymentStatus = "Pending" };
     private bool isSubmitting = false;
     private string errorMessage = string.Empty;
+    private string productSearch = string.Empty;
+    private List<Book> suggestedProducts = new();
 
     protected override void OnInitialized()
     {
@@ -163,5 +184,45 @@
         {
             isSubmitting = false;
         }
+    }
+
+    private async Task OnProductSearch(ChangeEventArgs e)
+    {
+        productSearch = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(productSearch))
+        {
+            suggestedProducts = new();
+            return;
+        }
+
+        try
+        {
+            // Remote + local merge; account for ApiResponse wrappers
+            var remoteResp = await ApiService.SearchProductsAsync(productSearch);
+            var remoteList = remoteResp?.Data ?? new List<Book>();
+
+            var localResp = await ApiService.GetProductsAsync();
+            var localList = localResp?.Data ?? new List<Book>();
+            var localIds = localList.Where(b => b.Id != null && b.Id.Contains(productSearch, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            suggestedProducts = remoteList.Concat(localIds)
+                .GroupBy(b => b.Id)
+                .Select(g => g.First())
+                .Take(20)
+                .ToList();
+        }
+        catch { suggestedProducts = new(); }
+    }
+
+    private void AddProductFromSuggestion(Book product)
+    {
+        invoiceRequest.Details.Add(new AdminInvoiceDetailItem
+        {
+            BookId = product.Id,
+            Quantity = 1,
+            TotalDiscount = 0
+        });
+        suggestedProducts = new();
+        productSearch = string.Empty;
     }
 }

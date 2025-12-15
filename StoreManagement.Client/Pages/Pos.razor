@@ -1,7 +1,7 @@
 @page "/pos"
 @layout AdminLayout
 @using StoreManagement.Client.Models
-@attribute [Authorize(Roles = "Staff")]
+@attribute [Authorize(Roles = "STAFF")]
 @inject IStoreService StoreService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
@@ -11,8 +11,22 @@
 <div class="pos-container">
     <div class="product-side">
         <h3>Products</h3>
-        <div class="search-bar">
-            <input @bind="searchTerm" @oninput="SearchProducts" placeholder="Search products..." />
+        <div class="search-bar position-relative">
+            <input class="form-control" @bind="searchTerm" @oninput="SearchProducts" placeholder="Nhập tên hoặc ID sản phẩm..." />
+            @if (suggestedProducts.Any())
+            {
+                <ul class="list-group position-absolute w-100" style="z-index:1000; max-height:240px; overflow:auto;">
+                    @foreach (var p in suggestedProducts)
+                    {
+                        <li class="list-group-item list-group-item-action" @onclick="() => SelectSuggestedProduct(p)">
+                            <div class="d-flex justify-content-between">
+                                <span>@p.Title</span>
+                                <small class="text-muted">@p.Id</small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
         </div>
         <div class="product-list">
             @foreach (var product in products)
@@ -55,7 +69,7 @@
             <button @onclick="ApplyVoucher">Apply</button>
             <select @bind="paymentMethod">
                 <option value="CASH">Cash</option>
-                <option value="CARD">Card</option>
+                <option value="TRANSFER">Transfer</option>
             </select>
             <button @onclick="Pay">Pay</button>
         </div>
@@ -68,6 +82,7 @@
 @code {
     private string searchTerm = "";
     private List<Book> products = new();
+    private List<Book> suggestedProducts = new();
     private List<CartItem> cart = new();
     private string? customerPhone = "";
     private List<Customer> customers = new();
@@ -87,12 +102,27 @@
         searchTerm = e.Value?.ToString() ?? "";
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
+            suggestedProducts = new();
             products = await StoreService.GetBooksAsync();
+            return;
         }
-        else
-        {
-            products = await StoreService.SearchBooksAsync(searchTerm);
-        }
+
+        // Remote search by name/title
+        var byName = await StoreService.SearchBooksAsync(searchTerm);
+        // Local quick filter by ID
+        var byId = products.Where(b => b.Id.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        suggestedProducts = byName.Concat(byId)
+                                   .GroupBy(b => b.Id)
+                                   .Select(g => g.First())
+                                   .Take(20)
+                                   .ToList();
+    }
+
+    private void SelectSuggestedProduct(Book product)
+    {
+        AddToCart(product);
+        suggestedProducts = new();
+        searchTerm = string.Empty;
     }
 
     private void AddToCart(Book product)
@@ -201,14 +231,14 @@
         var invoice = await StoreService.CreateInvoiceAsync(request);
         if (invoice != null)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Invoice created successfully");
+            await JSRuntime.InvokeVoidAsync("alert", "Thanh toán POS thành công.");
             cart.Clear();
             selectedCustomer = null;
             appliedVoucher = null;
             voucherCode = "";
             customerPhone = "";
             CalculateTotal();
-            NavigationManager.NavigateTo($"/orders/detail/{invoice.Id}");
+            // Giữ nguyên trang POS, không điều hướng
         }
         else
         {

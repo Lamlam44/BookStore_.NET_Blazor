@@ -17,6 +17,8 @@
         public string? VoucherCode { get; set; }
         public decimal TotalAmount { get; set; }
         public string PaymentMethod { get; set; } = string.Empty;
+        public string OrderType { get; set; } = string.Empty; // POS or ONLINE
+        public string PaymentStatus { get; set; } = string.Empty; // PAID or UNPAID
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Pending; // Default to Pending
         public virtual Account CashierStaff { get; set; } = default!;
         public virtual Voucher? Voucher { get; set; }

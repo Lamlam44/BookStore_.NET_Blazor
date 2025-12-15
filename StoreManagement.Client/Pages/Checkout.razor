@@ -29,6 +29,10 @@ else
                         <label class="form-label">Số điện thoại</label>
                         <InputText class="form-control" @bind-Value="orderModel.Phone" />
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="orderModel.Email" />
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Địa chỉ</label>
                         <InputText class="form-control" @bind-Value="orderModel.Address" />
@@ -208,6 +212,9 @@ else
 
         [System.ComponentModel.DataAnnotations.Required]
         public string Phone { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = string.Empty;
 
         public string PaymentNote { get; set; } = string.Empty;
 

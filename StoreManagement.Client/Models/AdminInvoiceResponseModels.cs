@@ -14,6 +14,7 @@ namespace StoreManagement.Client.Models
         public string Id { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public string PositionName { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty; // match backend StaffDTO
     }
 
     public class AdminSummaryInvoiceDetailDTO

@@ -327,6 +327,8 @@ namespace StoreManagement.Client.Services
                 Subtotal = adminInvoiceResponse.Subtotal,
                 TotalAmount = adminInvoiceResponse.FinalAmount, // Assuming FinalAmount is the total
                 PaymentMethod = adminInvoiceResponse.PaymentMethod,
+                OrderType = adminInvoiceResponse.OrderType,
+                PaymentStatus = adminInvoiceResponse.PaymentStatus,
                 CustomerId = adminInvoiceResponse.Customer?.Id ?? string.Empty,
                 CashierStaffId = adminInvoiceResponse.Staff?.Id ?? string.Empty,
                 
@@ -356,13 +358,48 @@ namespace StoreManagement.Client.Services
         {
             try
             {
-                var response = await _http.PostAsJsonAsync("api/invoices", request);
-                if (response.IsSuccessStatusCode)
+                // Route based on order type to match backend controller
+                var endpoint = request.OrderType?.ToUpperInvariant() == "POS"
+                    ? "api/orders/pos"
+                    : "api/orders/online";
+
+                var response = await _http.PostAsJsonAsync(endpoint, request);
+                if (!response.IsSuccessStatusCode) return null;
+
+                // Backend returns ApiResponse<AdminInvoiceDetailResponse>
+                var apiRes = await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>();
+                var data = apiRes?.Data;
+                if (data == null) return null;
+
+                // Minimal mapping to client Invoice used by UI navigation
+                var paymentTimeLocal = data.PaymentTime.HasValue
+                    ? DateTime.SpecifyKind(data.PaymentTime.Value, DateTimeKind.Utc).AddHours(7)
+                    : DateTime.MinValue;
+
+                var invoice = new Invoice
                 {
-                    var result = await response.Content.ReadFromJsonAsync<ApiResponse<Invoice>>();
-                    return result?.Data;
-                }
-                return null;
+                    Id = data.Id,
+                    PaymentTime = paymentTimeLocal,
+                    Subtotal = data.Subtotal,
+                    TotalAmount = data.FinalAmount,
+                    PaymentMethod = data.PaymentMethod,
+                    OrderType = data.OrderType,
+                    PaymentStatus = data.PaymentStatus,
+                    CustomerId = data.Customer?.Id ?? string.Empty,
+                    CashierStaffId = data.Staff?.Id ?? string.Empty,
+                    Status = (data.PaymentStatus?.Equals("PAID", StringComparison.OrdinalIgnoreCase) == true
+                              || data.Status?.Equals("DELIVERED", StringComparison.OrdinalIgnoreCase) == true)
+                              && data.FinalAmount > 0 ? InvoiceStatus.Paid : InvoiceStatus.Pending,
+                    InvoiceDetails = data.Details.Select(d => new InvoiceDetail
+                    {
+                        Id = d.Id,
+                        BookId = d.BookId,
+                        Quantity = d.Quantity,
+                        UnitPrice = d.UnitPrice
+                    }).ToList()
+                };
+
+                return invoice;
             }
             catch { return null; }
         }

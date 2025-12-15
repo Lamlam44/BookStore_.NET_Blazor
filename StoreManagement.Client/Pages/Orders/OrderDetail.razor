@@ -1,6 +1,6 @@
 @page "/orders/{Id}"
 @layout StoreManagement.Client.Layout.CustomerLayout
-@inject Services.ApiService ApiService
+@inject StoreManagement.Client.Services.IStoreService StoreService
 @inject NavigationManager Navigation
 
 <h3>Chi tiết đơn hàng</h3>
@@ -21,6 +21,32 @@ else if (invoice != null)
             <p>Khách hàng: @invoice.CustomerPhone</p>
             <p>Thời gian: @invoice.PaymentTime.ToString("g")</p>
             <p>Phương thức thanh toán: @invoice.PaymentMethod</p>
+            <p>Loại đơn: @invoice.OrderType</p>
+            <p>Trạng thái thanh toán: @invoice.PaymentStatus</p>
+            @if (CanEditInvoice(invoice))
+            {
+                <div class="card mt-3">
+                    <div class="card-header">Chỉnh sửa thông tin khách hàng</div>
+                    <div class="card-body">
+                        <EditForm Model="editModel">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Số điện thoại</label>
+                                    <InputText class="form-control" @bind-Value="editModel.Phone" />
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Địa chỉ</label>
+                                    <InputText class="form-control" @bind-Value="editModel.Address" />
+                                </div>
+                            </div>
+                            <div class="text-end mt-3">
+                                <button class="btn btn-secondary" disabled> Lưu (yêu cầu API cập nhật khách hàng) </button>
+                            </div>
+                            <small class="text-muted">Chỉ thay đổi frontend. Backend hiện không có endpoint cập nhật thông tin khách theo đơn.</small>
+                        </EditForm>
+                    </div>
+                </div>
+            }
 
             <h6>Chi tiết</h6>
             <table class="table">
@@ -54,10 +80,15 @@ else if (invoice != null)
     {
         try
         {
-            var fetchedInvoice = await ApiService.GetOrderByIdAsync(Id);
-            if (fetchedInvoice != null)
+            var fetchedInvoiceResponse = await StoreService.GetInvoiceByIdAsync(Id);
+            if (fetchedInvoiceResponse.Success && fetchedInvoiceResponse.Data != null)
             {
-                invoice = fetchedInvoice;
+                invoice = fetchedInvoiceResponse.Data;
+                editModel = new EditCustomerModel
+                {
+                    Phone = invoice?.CustomerPhone ?? string.Empty,
+                    Address = string.Empty
+                };
             }
             else
             {
@@ -72,5 +103,27 @@ else if (invoice != null)
         {
             isLoading = false;
         }
+    }
+
+    private bool CanEditInvoice(StoreManagement.Client.Models.Invoice inv)
+    {
+        // POS: only when Status==Pending and PaymentStatus==UNPAID; ONLINE: Status==Pending
+        if (inv.OrderType == "POS")
+        {
+            return inv.Status == StoreManagement.Client.Models.InvoiceStatus.Pending 
+                   && string.Equals(inv.PaymentStatus, "UNPAID", StringComparison.OrdinalIgnoreCase);
+        }
+        if (inv.OrderType == "ONLINE")
+        {
+            return inv.Status == StoreManagement.Client.Models.InvoiceStatus.Pending;
+        }
+        return false;
+    }
+
+    private EditCustomerModel editModel = new();
+    private class EditCustomerModel
+    {
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
     }
 }
