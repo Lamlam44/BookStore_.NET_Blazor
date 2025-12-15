@@ -19,8 +19,8 @@
                     <label for="paymentMethod" class="form-label">Phương thức thanh toán:</label>
                     <InputSelect @bind-Value="invoiceRequest.PaymentMethod" class="form-select" id="paymentMethod">
                         <option value="">Chọn phương thức thanh toán</option>
-                        <option value="Cash">Tiền mặt</option>
-                        <option value="Transfer">Chuyển khoản</option>
+                        <option value="CASH">Tiền mặt</option>
+                        <option value="TRANSFER">Chuyển khoản</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => invoiceRequest.PaymentMethod)" />
                 </div>

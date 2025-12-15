@@ -258,15 +258,98 @@ namespace StoreManagement.Client.Services
             }
              catch (Exception ex) { return new ApiResponse<bool> { Success = false, Message = ex.Message }; }
         }
+
+        public async Task<Customer?> CreateCustomerAndGetAsync(string name, string phone, string address)
+        {
+            try
+            {
+                var dto = new { Name = name, Phone = phone, Address = address };
+                var response = await _http.PostAsJsonAsync("api/customers", dto);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var created = await response.Content.ReadFromJsonAsync<ApiResponse<Customer>>();
+                return created?.Data;
+            }
+            catch
+            {
+                return null;
+            }
+        }
         
         // Thêm hàm lấy hóa đơn cho Dashboard
          public async Task<List<Invoice>> GetInvoicesAsync()
         {
             try
             {
-                return await _http.GetFromJsonAsync<List<Invoice>>("api/invoices") ?? new List<Invoice>();
+                // Correct endpoint for orders/invoices
+                var url = "api/orders?PageNumber=1&PageSize=99999"; 
+                var response = await _http.GetFromJsonAsync<ApiResponse<PaginationResponse<AdminInvoiceResponse>>>(url);
+
+                if (response?.Data?.Items == null)
+                {
+                    return new List<Invoice>();
+                }
+
+                // Map AdminInvoiceResponse to client-side Invoice model
+                var invoices = response.Data.Items.Select(adminInvoice => MapToInvoice(adminInvoice)).ToList();
+                return invoices;
             }
-            catch { return new List<Invoice>(); }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching invoices: {ex.Message}");
+                return new List<Invoice>();
+            }
+        }
+
+        private Invoice MapToInvoice(AdminInvoiceResponse adminInvoiceResponse)
+        {
+            // Convert PaymentTime from UTC to local (Asia/Ho_Chi_Minh) for accurate date filtering
+            DateTime paymentTimeLocal = DateTime.MinValue;
+            if (adminInvoiceResponse.PaymentTime.HasValue)
+            {
+                // Blazor WASM may not support TimeZoneInfo IDs reliably; convert assuming UTC → GMT+7 (Vietnam)
+                var utc = DateTime.SpecifyKind(adminInvoiceResponse.PaymentTime.Value, DateTimeKind.Utc);
+                paymentTimeLocal = utc.AddHours(7);
+            }
+
+            // Determine paid status: paid when payment status is PAID or order delivered, and has a positive amount
+            bool isPaid = (string.Equals(adminInvoiceResponse.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(adminInvoiceResponse.Status, "DELIVERED", StringComparison.OrdinalIgnoreCase))
+                          && adminInvoiceResponse.FinalAmount > 0;
+
+            var invoice = new Invoice
+            {
+                Id = adminInvoiceResponse.Id,
+                PaymentTime = paymentTimeLocal, // already adjusted to local time
+                Subtotal = adminInvoiceResponse.Subtotal,
+                TotalAmount = adminInvoiceResponse.FinalAmount, // Assuming FinalAmount is the total
+                PaymentMethod = adminInvoiceResponse.PaymentMethod,
+                CustomerId = adminInvoiceResponse.Customer?.Id ?? string.Empty,
+                CashierStaffId = adminInvoiceResponse.Staff?.Id ?? string.Empty,
+                
+                // Infer client-side InvoiceStatus from backend string statuses
+                Status = isPaid ? InvoiceStatus.Paid : InvoiceStatus.Pending,
+
+                // Map InvoiceDetails
+                InvoiceDetails = adminInvoiceResponse.Details.Select(adminDetail => new InvoiceDetail
+                {
+                    Id = adminDetail.Id,
+                    BookId = adminDetail.BookId,
+                    Quantity = adminDetail.Quantity,
+                    // Assuming UnitPrice from AdminSummaryInvoiceDetailDTO maps to UnitPrice in InvoiceDetail
+                    // and TotalDiscount from AdminSummaryInvoiceDetailDTO is part of the detail
+                    // You might need to adjust based on exact backend DTO mapping if needed
+                    // For now, let's map what we have directly.
+                    UnitPrice = adminDetail.UnitPrice,
+                    // Note: InvoiceDetail does not have TotalDiscount field. 
+                    // This data might be lost or needs to be aggregated/handled differently.
+                }).ToList()
+            };
+
+            return invoice;
         }
 
         public async Task<Invoice?> CreateInvoiceAsync(CreateInvoiceRequest request)
@@ -282,6 +365,21 @@ namespace StoreManagement.Client.Services
                 return null;
             }
             catch { return null; }
+        }
+
+        public async Task<bool> CreateOnlineInvoiceAsync(CreateInvoiceRequest request)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/orders/online", request);
+                if (!response.IsSuccessStatusCode) return false;
+                // We don't need the payload to proceed; acknowledge success
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // [FIX] Implement missing Order methods to satisfy Interface

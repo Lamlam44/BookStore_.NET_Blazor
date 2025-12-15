@@ -22,13 +22,13 @@
     <div class="col-md-4">
         <div class="form-group">
             <label for="startDate">Ngày bắt đầu:</label>
-            <InputDate @bind-Value="startDate" class="form-control" id="startDate" @onchange="UpdateDashboardData" />
+            <InputDate @bind-Value="startDate" class="form-control" id="startDate" @onchange="@(_ => UpdateDashboardData())" />
         </div>
     </div>
     <div class="col-md-4">
         <div class="form-group">
             <label for="endDate">Ngày kết thúc:</label>
-            <InputDate @bind-Value="endDate" class="form-control" id="endDate" @onchange="UpdateDashboardData" />
+            <InputDate @bind-Value="endDate" class="form-control" id="endDate" @onchange="@(_ => UpdateDashboardData())" />
         </div>
     </div>
 </div>
@@ -76,10 +76,12 @@ else
                         @if (chartData.Any())
                         {
                             var maxChartValue = chartData.Max(cd => cd.Value);
+                            var safeMax = maxChartValue > 0 ? maxChartValue : 1; // avoid division by 0
                             foreach (var item in chartData)
                             {
+                                var barHeight = item.Value > 0 ? Math.Round(item.Value / safeMax * 250) : 2; // show minimal bar for zero
                                 <div style="display: flex; flex-direction: column; align-items: center; margin: 0 5px;">
-                                    <div style="background-color: @GetBarColor(); width: 30px; height: @((item.Value / maxChartValue * 250).ToString("0.0"))px; transition: height 0.5s;"></div>
+                                    <div style="background-color: @GetBarColor(); width: 30px; height: @($"{barHeight}px"); transition: height 0.5s;"></div>
                                     <small>@item.Label</small>
                                     <small>@item.Value.ToString("N0")</small>
                                 </div>
@@ -87,7 +89,13 @@ else
                         }
                         else
                         {
-                            <p>Không có dữ liệu để hiển thị.</p>
+                            <div>
+                                <p>Không có dữ liệu để hiển thị.</p>
+                                @if (!isLoading && (!allInvoices.Any() || allInvoices == null))
+                                {
+                                    <p class="text-muted">Gợi ý: Kiểm tra đăng nhập để tải dữ liệu hóa đơn (API yêu cầu xác thực).</p>
+                                }
+                            </div>
                         }
                     </div>
                 </div>
@@ -121,9 +129,11 @@ else
     {
         isLoading = true;
         allInvoices = await StoreService.GetInvoicesAsync();
+        Console.WriteLine($"[Dashboard] Loaded invoices: {allInvoices.Count}");
         // Assuming GetCustomersAsync without pagination is available and fetches all.
         // If not, we would need to implement pagination logic here.
         allCustomers = (await StoreService.GetCustomersAsync(1, 99999)).Data?.Items.ToList() ?? new List<Customer>(); // Using the paginated one for safety
+        Console.WriteLine($"[Dashboard] Loaded customers: {allCustomers.Count}");
         isLoading = false;
     }
 
@@ -133,21 +143,31 @@ else
         // Ensure dates are correctly set for filtering (start of day, end of day)
         var filterStartDate = startDate.Date;
         var filterEndDate = endDate.Date.AddDays(1).AddTicks(-1); // End of the selected day
+        Console.WriteLine($"[Dashboard] Update triggered. Start={filterStartDate:yyyy-MM-dd}, End={filterEndDate:yyyy-MM-dd HH:mm:ss}");
+
+        // Diagnostic: list loaded invoices with status and times
+        foreach (var inv in allInvoices)
+        {
+            Console.WriteLine($"[Dashboard] Invoice id={inv.Id}, FinalAmount={inv.TotalAmount}, Status={inv.Status}, PaymentTimeLocal={inv.PaymentTime:yyyy-MM-dd HH:mm:ss}");
+        }
 
         // Filter Invoices
         var filteredInvoices = allInvoices
-            .Where(inv => inv.PaymentTime >= filterStartDate && inv.PaymentTime <= filterEndDate)
+            .Where(inv => inv.Status == InvoiceStatus.Paid && inv.PaymentTime >= filterStartDate && inv.PaymentTime <= filterEndDate)
             .ToList();
+        Console.WriteLine($"[Dashboard] Filtered paid invoices count: {filteredInvoices.Count}");
 
         // Filter Customers
         var filteredCustomers = allCustomers
             .Where(cust => cust.CreatedAt >= filterStartDate && cust.CreatedAt <= filterEndDate)
             .ToList();
+        Console.WriteLine($"[Dashboard] Filtered customers count: {filteredCustomers.Count}");
 
         // Calculate Summary Cards
         totalRevenue = filteredInvoices.Sum(inv => inv.TotalAmount);
         totalBooksSold = filteredInvoices.SelectMany(inv => inv.InvoiceDetails).Sum(detail => detail.Quantity);
         newCustomersCount = filteredCustomers.Count;
+        Console.WriteLine($"[Dashboard] Summary: revenue={totalRevenue}, booksSold={totalBooksSold}, newCustomers={newCustomersCount}");
 
         // Prepare Chart Data
         chartData = new List<ChartDataItem>();
@@ -164,6 +184,7 @@ else
                     })
                     .OrderBy(cd => DateTime.ParseExact(cd.Label, "dd/MM", CultureInfo.InvariantCulture))
                     .ToList();
+                Console.WriteLine($"[Dashboard] Chart data points (Revenue): {chartData.Count}");
                 break;
             case StatisticType.BooksSold:
                 chartData = filteredInvoices
@@ -176,6 +197,7 @@ else
                     })
                     .OrderBy(cd => DateTime.ParseExact(cd.Label, "dd/MM", CultureInfo.InvariantCulture))
                     .ToList();
+                Console.WriteLine($"[Dashboard] Chart data points (BooksSold): {chartData.Count}");
                 break;
             case StatisticType.NewCustomers:
                 chartData = filteredCustomers
@@ -187,11 +209,13 @@ else
                     })
                     .OrderBy(cd => DateTime.ParseExact(cd.Label, "dd/MM", CultureInfo.InvariantCulture))
                     .ToList();
+                Console.WriteLine($"[Dashboard] Chart data points (NewCustomers): {chartData.Count}");
                 break;
         }
 
         isLoading = false;
         StateHasChanged(); // Notify Blazor to re-render the component
+        Console.WriteLine("[Dashboard] Update complete and UI refreshed.");
     }
 
     private string GetStatisticTypeDisplayName()

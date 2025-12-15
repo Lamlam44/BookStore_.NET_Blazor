@@ -67,12 +67,14 @@ namespace StoreManagement.Client.Services
         Task<List<Customer>> SearchCustomersAsync(string keyword);        
         Task<ApiResponse<PaginationResponse<Customer>>> GetCustomersAsync(int pageNumber, int pageSize);
         Task<ApiResponse<bool>> CreateCustomerAsync(string name, string phone, string address);
+        Task<Customer?> CreateCustomerAndGetAsync(string name, string phone, string address);
 
         // ==========================================
         // 8. KHO HÀNG & HÓA ĐƠN (INVENTORY & DASHBOARD)
         // ==========================================
         Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
         Task<Invoice?> CreateInvoiceAsync(CreateInvoiceRequest request); 
+        Task<bool> CreateOnlineInvoiceAsync(CreateInvoiceRequest request);
         Task<List<Invoice>> GetInvoicesAsync(); // Dùng cho Dashboard
 
         Task<ApiResponse<Invoice>> GetInvoiceByIdAsync(string id);
