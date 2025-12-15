@@ -1,5 +1,6 @@
 @page "/publishers"
 @layout StoreManagement.Client.Layout.AdminLayout
+@using Microsoft.AspNetCore.Components.Forms
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services
 @inject IStoreService StoreService
@@ -90,12 +91,7 @@
                 <EditForm Model="currentPublisher" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator />
                     
-                    @* Mã Code *@
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-secondary small">Mã NXB (Code) <span class="text-danger">*</span></label>
-                        <InputText class="form-control text-uppercase fw-bold" @bind-Value="currentPublisher.Code" />
-                    </div>
-
+                    
                     @* Tên *@
                     <div class="mb-3">
                         <label class="form-label fw-bold text-secondary small">Tên Nhà Xuất Bản <span class="text-danger">*</span></label>
@@ -147,15 +143,70 @@
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(currentPublisher.Name) || string.IsNullOrWhiteSpace(currentPublisher.Code)) return;
+        if (string.IsNullOrWhiteSpace(currentPublisher.Name)) return;
         
         if (string.IsNullOrEmpty(currentPublisher.Id)) 
+        {
+            // Ensure code is auto-generated if not provided via UI
+            if (string.IsNullOrWhiteSpace(currentPublisher.Code))
+            {
+                currentPublisher.Code = GenerateCodeFromName(currentPublisher.Name, "PUB");
+            }
             await StoreService.CreatePublisherAsync(currentPublisher);
+        }
         else 
             await StoreService.UpdatePublisherAsync(currentPublisher);
             
         showModal = false; 
         await LoadData();
+    }
+
+    private static string GenerateCodeFromName(string? name, string prefix)
+    {
+        var input = (name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(input))
+            return prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+
+        var normalized = input.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder();
+        foreach (var ch in normalized)
+        {
+            var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (cat == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+
+            char c = ch;
+            if (c == 'đ') c = 'd';
+            else if (c == 'Đ') c = 'D';
+
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+            {
+                sb.Append(char.ToUpperInvariant(c));
+            }
+            else if (char.IsWhiteSpace(c) || c == '-' || c == '_')
+            {
+                sb.Append('-');
+            }
+        }
+
+        var raw = sb.ToString();
+        var cleaned = new System.Text.StringBuilder(raw.Length);
+        bool lastDash = false;
+        foreach (var c in raw)
+        {
+            if (c == '-')
+            {
+                if (!lastDash) { cleaned.Append('-'); lastDash = true; }
+            }
+            else
+            {
+                cleaned.Append(c);
+                lastDash = false;
+            }
+        }
+        var code = cleaned.ToString().Trim('-');
+        if (string.IsNullOrWhiteSpace(code))
+            code = prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+        return code;
     }
 
     private async Task DeletePublisher(Publisher p)

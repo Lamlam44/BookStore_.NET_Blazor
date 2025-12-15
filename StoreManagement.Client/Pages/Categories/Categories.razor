@@ -100,11 +100,7 @@
                 <EditForm Model="currentCategory" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator />
                     
-                    @* Mã Code *@
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-secondary">Mã Danh Mục (*)</label>
-                        <InputText class="form-control text-uppercase fw-bold" @bind-Value="currentCategory.CategoryCode" />
-                    </div>
+                    @* Bỏ đi trường nhập Mã Danh Mục trong form thêm *@
 
                     @* Tên *@
                     <div class="mb-3">
@@ -149,15 +145,72 @@
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(currentCategory.CategoryName) || string.IsNullOrWhiteSpace(currentCategory.CategoryCode)) return;
+        if (string.IsNullOrWhiteSpace(currentCategory.CategoryName)) return;
         
-        if (string.IsNullOrEmpty(currentCategory.Id)) 
+        if (string.IsNullOrEmpty(currentCategory.Id))
+        {
+            if (string.IsNullOrWhiteSpace(currentCategory.CategoryCode))
+            {
+                currentCategory.CategoryCode = GenerateCodeFromName(currentCategory.CategoryName, "CAT");
+            }
             await StoreService.CreateCategoryAsync(currentCategory);
+        }
         else 
+        {
+            // For updates, keep existing code; do not force changes
             await StoreService.UpdateCategoryAsync(currentCategory);
+        }
             
         showModal = false; 
         await LoadData();
+    }
+
+    private static string GenerateCodeFromName(string? name, string prefix)
+    {
+        var input = (name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(input))
+            return prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+
+        var normalized = input.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder();
+        foreach (var ch in normalized)
+        {
+            var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (cat == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+
+            char c = ch;
+            if (c == 'đ') c = 'd';
+            else if (c == 'Đ') c = 'D';
+
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+            {
+                sb.Append(char.ToUpperInvariant(c));
+            }
+            else if (char.IsWhiteSpace(c) || c == '-' || c == '_')
+            {
+                sb.Append('-');
+            }
+        }
+
+        var raw = sb.ToString();
+        var cleaned = new System.Text.StringBuilder(raw.Length);
+        bool lastDash = false;
+        foreach (var c in raw)
+        {
+            if (c == '-')
+            {
+                if (!lastDash) { cleaned.Append('-'); lastDash = true; }
+            }
+            else
+            {
+                cleaned.Append(c);
+                lastDash = false;
+            }
+        }
+        var code = cleaned.ToString().Trim('-');
+        if (string.IsNullOrWhiteSpace(code))
+            code = prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+        return code;
     }
 
     private async Task DeleteCategory(Category c)

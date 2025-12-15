@@ -82,7 +82,7 @@
                                     <td><div class="price-text">@book.RetailPrice.ToString("N0") đ</div></td>
                                     <td><div class="fw-bold text-dark">@book.StockQuantity</div></td>
                                     <td>
-                                        @if (book.Status == "ACTIVE") { <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">Đang bán</span> }
+                                        @if (book.Status == "Active") { <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">Đang bán</span> }
                                         else { <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-3">Ngừng bán</span> }
                                     </td>
                                     <td class="text-end">
@@ -171,8 +171,8 @@
                             <div class="mb-3">
                                 <label class="form-label fw-bold small text-secondary">Trạng Thái</label>
                                 <InputSelect class="form-select" @bind-Value="currentBook.Status">
-                                    <option value="ACTIVE">Đang bán</option>
-                                    <option value="INACTIVE">Ngừng kinh doanh</option>
+                                    <option value="Active">Đang bán</option>
+                                    <option value="Inactive">Ngừng kinh doanh</option>
                                 </InputSelect>
                             </div>
                         </div>
@@ -231,7 +231,7 @@
         currentBook = new Book 
         { 
             Id = null, // Quan trọng: Đánh dấu là tạo mới
-            Status = "ACTIVE",
+            Status = "Active",
             StockQuantity = 0, // Sách mới chưa có hàng
             RetailPrice = 0
         }; 

@@ -1,5 +1,6 @@
 @page "/authors"
 @layout StoreManagement.Client.Layout.AdminLayout
+@using Microsoft.AspNetCore.Components.Forms
 @using StoreManagement.Client.Models
 @using StoreManagement.Client.Services
 @inject IStoreService StoreService
@@ -84,12 +85,6 @@
                 <EditForm Model="currentAuthor" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator />
                     
-                    @* Mã Code *@
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-secondary">Mã Tác Giả (*)</label>
-                        <InputText class="form-control text-uppercase fw-bold" @bind-Value="currentAuthor.Code"/>
-                    </div>
-
                     @* Tên *@
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-secondary">Tên Tác Giả (*)</label>
@@ -133,15 +128,73 @@
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(currentAuthor.Name) || string.IsNullOrWhiteSpace(currentAuthor.Code)) return;
+        if (string.IsNullOrWhiteSpace(currentAuthor.Name)) return;
         
         if (string.IsNullOrEmpty(currentAuthor.Id)) 
+        {
+            // Ensure code is auto-generated if not provided via UI
+            if (string.IsNullOrWhiteSpace(currentAuthor.Code))
+            {
+                currentAuthor.Code = GenerateCodeFromName(currentAuthor.Name, "AUTH");
+            }
             await StoreService.CreateAuthorAsync(currentAuthor);
+        }
         else 
             await StoreService.UpdateAuthorAsync(currentAuthor);
             
         showModal = false; 
         await LoadData();
+    }
+
+    private static string GenerateCodeFromName(string? name, string prefix)
+    {
+        var input = (name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(input))
+            return prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+
+        // Remove accents/diacritics and map Vietnamese Đ/đ
+        var normalized = input.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder();
+        foreach (var ch in normalized)
+        {
+            var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (cat == System.Globalization.UnicodeCategory.NonSpacingMark) continue; // strip diacritics
+
+            char c = ch;
+            if (c == 'đ') c = 'd';
+            else if (c == 'Đ') c = 'D';
+
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))
+            {
+                sb.Append(char.ToUpperInvariant(c));
+            }
+            else if (char.IsWhiteSpace(c) || c == '-' || c == '_')
+            {
+                sb.Append('-');
+            }
+            // ignore other characters
+        }
+
+        // Collapse multiple dashes and trim
+        var raw = sb.ToString();
+        var cleaned = new System.Text.StringBuilder(raw.Length);
+        bool lastDash = false;
+        foreach (var c in raw)
+        {
+            if (c == '-')
+            {
+                if (!lastDash) { cleaned.Append('-'); lastDash = true; }
+            }
+            else
+            {
+                cleaned.Append(c);
+                lastDash = false;
+            }
+        }
+        var code = cleaned.ToString().Trim('-');
+        if (string.IsNullOrWhiteSpace(code))
+            code = prefix + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpperInvariant();
+        return code;
     }
 
     private async Task DeleteAuthor(Author a)
