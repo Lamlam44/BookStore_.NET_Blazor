@@ -1,0 +1,306 @@
+@page "/receipts"
+@layout StoreManagement.Client.Layout.AdminLayout
+@attribute [Authorize(Roles = "ADMIN,STAFF")]
+
+@using StoreManagement.Client.Models
+@using StoreManagement.Client.Services
+@inject IStoreService StoreService
+@inject IJSRuntime JSRuntime
+
+<style>
+    .receipt-code { font-family: 'Consolas', monospace; color: #4e73df; font-weight: 700; }
+    .badge-draft { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-done { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .empty-data { color: #ccc; font-style: italic; font-size: 0.9rem; }
+    .table-hover tbody tr:hover { background-color: rgba(78, 115, 223, 0.05); }
+</style>
+
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-primary mb-0"><i class="bi bi-card-checklist me-2"></i>Quản lý Nhập Kho</h3>
+            <div class="text-muted small mt-1">Danh sách các phiếu nhập hàng gần đây</div>
+        </div>
+        <a href="receipts/create" class="btn btn-primary fw-bold shadow-sm rounded-pill px-4">
+            <i class="bi bi-plus-lg me-1"></i> Nhập hàng mới
+        </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-warning h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs fw-bold text-warning text-uppercase mb-1">Phiếu Nháp (Chờ duyệt)</div>
+                    <div class="h5 mb-0 fw-bold text-gray-800">@receipts.Count(x => x.GRNStatus == "DRAFT") phiếu</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-4 border-success h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs fw-bold text-success text-uppercase mb-1">Đã Hoàn Thành</div>
+                    <div class="h5 mb-0 fw-bold text-gray-800">@receipts.Count(x => x.GRNStatus == "COMPLETED") phiếu</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-primary">
+                        <tr>
+                            <th class="ps-4">Mã Phiếu</th>
+                            <th>Ngày Tạo</th>
+                            <th>Nhà Cung Cấp</th>
+                            <th>Tổng Tiền</th>
+                            <th>Trạng Thái</th>
+                            <th class="text-end pe-4">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (receipts != null && receipts.Any())
+                        {
+                            @foreach (var item in receipts)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <span class="receipt-code">#@item.Id.Substring(0, 8).ToUpper()</span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@item.CreatedAt.ToString("HH:mm")</div>
+                                        <div class="small text-muted">@item.CreatedAt.ToString("dd/MM/yyyy")</div>
+                                    </td>
+                                    <td>
+                                        @if (item.Supplier != null)
+                                        {
+                                            <span class="fw-bold text-dark">@item.Supplier.SupplierName</span>
+                                        }
+                                        else if (!string.IsNullOrEmpty(item.SupplierName))
+                                        {
+                                            <span class="fw-bold text-dark">@item.SupplierName</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="empty-data">--- Chưa cập nhật ---</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @{
+                                            decimal displayTotal = item.TotalCost;
+                                            if (displayTotal == 0 && item.ReceiptDetails != null && item.ReceiptDetails.Any())
+                                            {
+                                                displayTotal = item.ReceiptDetails.Sum(d => d.QuantityReceived * d.UnitCost);
+                                            }
+                                        }
+                                        <span class="fw-bold text-danger">@displayTotal.ToString("N0") đ</span>
+                                    </td>
+                                    <td>
+                                        @if (item.GRNStatus == "COMPLETED")
+                                        {
+                                            <span class="badge badge-done rounded-pill px-3 py-2">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Đã nhập kho
+                                            </span>
+                                        }
+                                        else if (item.GRNStatus == "DRAFT")
+                                        {
+                                            <span class="badge badge-draft rounded-pill px-3 py-2">
+                                                <i class="bi bi-pencil-square me-1"></i> Nháp
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary rounded-pill px-3">@item.GRNStatus</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        @if (item.GRNStatus == "DRAFT")
+                                        {
+                                            <button class="btn btn-sm btn-success fw-bold me-2 shadow-sm" 
+                                                    @onclick="() => ApproveReceipt(item)" title="Duyệt">
+                                                <i class="bi bi-check-lg"></i> Duyệt
+                                            </button>
+                                        }
+                                        <button class="btn btn-sm btn-light border" title="Xem chi tiết" 
+                                                @onclick="() => ViewDetails(item)">
+                                            <i class="bi bi-eye text-secondary"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <div class="text-muted mb-2"><i class="bi bi-inbox fs-1"></i></div>
+                                    <div class="text-muted">Chưa có phiếu nhập kho nào.</div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- MODAL CHI TIẾT (Popup) --- *@
+@if (selectedReceipt != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-receipt me-2"></i>Chi tiết phiếu nhập #@selectedReceipt.Id.Substring(0, 8).ToUpper()
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="mb-1 text-muted small">Nhà cung cấp</p>
+                            <h6 class="fw-bold text-primary">
+                                @(selectedReceipt.Supplier?.SupplierName ?? selectedReceipt.SupplierName ?? "---")
+                            </h6>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <p class="mb-1 text-muted small">Ngày nhập</p>
+                            <h6 class="fw-bold">@selectedReceipt.CreatedAt.ToString("dd/MM/yyyy HH:mm")</h6>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive border rounded">
+                        <table class="table table-striped mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Sách</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (selectedReceipt.ReceiptDetails != null && selectedReceipt.ReceiptDetails.Any())
+                                {
+                                    @foreach (var detail in selectedReceipt.ReceiptDetails)
+                                    {
+                                        <tr>
+                                            <td><span class="fw-bold">@detail.BookTitle</span></td>
+                                            <td class="text-center">@detail.QuantityReceived</td>
+                                            <td class="text-end">@detail.UnitCost.ToString("N0")</td>
+                                            <td class="text-end fw-bold text-dark">
+                                                @((detail.QuantityReceived * detail.UnitCost).ToString("N0"))
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else 
+                                {
+                                    <tr><td colspan="4" class="text-center py-3">Đang tải chi tiết...</td></tr>
+                                }
+                            </tbody>
+                            <tfoot class="bg-white border-top">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold text-uppercase text-secondary pt-3">Tổng cộng:</td>
+                                    <td class="text-end fw-bold text-danger fs-5 pt-3">
+                                        @{
+                                            // --- CHỖ CẦN LƯU Ý: Phải dùng TotalCost ---
+                                            decimal modalTotal = selectedReceipt.TotalCost;
+                                            
+                                            // Fallback: Nếu API trả về 0 thì tự tính lại
+                                            if (modalTotal == 0 && selectedReceipt.ReceiptDetails != null)
+                                            {
+                                                modalTotal = selectedReceipt.ReceiptDetails.Sum(x => x.QuantityReceived * x.UnitCost);
+                                            }
+                                        }
+                                        @modalTotal.ToString("N0") đ
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    @* Chỉ hiện nút duyệt nếu trạng thái là DRAFT *@
+                    @if (selectedReceipt.GRNStatus == "DRAFT")
+                    {
+                        <button class="btn btn-success fw-bold" @onclick="() => ApproveReceipt(selectedReceipt)">
+                            <i class="bi bi-check-lg me-1"></i> Duyệt phiếu này
+                        </button>
+                    }
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<InventoryReceipt> receipts = new();
+    
+    // Biến cho Modal
+    private InventoryReceipt? selectedReceipt = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        receipts = await StoreService.GetReceiptsAsync();
+        receipts = receipts.OrderByDescending(x => x.CreatedAt).ToList();
+    }
+
+    // --- LOGIC MODAL ---
+    private async Task ViewDetails(InventoryReceipt item)
+    {
+        // 1. Mở modal với dữ liệu sơ bộ (để hiện tiêu đề trước cho mượt)
+        selectedReceipt = item;
+
+        // 2. Gọi API lấy chi tiết đầy đủ (bao gồm danh sách sách)
+        // Lưu ý: Đảm bảo bạn đã thêm hàm GetReceiptByIdAsync vào Service ở Bước 1
+        var fullData = await StoreService.GetReceiptByIdAsync(item.Id);
+        
+        if (fullData != null)
+        {
+            // 3. Cập nhật dữ liệu đầy đủ vào Modal
+            selectedReceipt = fullData;
+        }
+    }
+
+    private void CloseModal()
+    {
+        selectedReceipt = null;
+    }
+    // -------------------
+
+    private async Task ApproveReceipt(InventoryReceipt item)
+    {
+        // Nếu duyệt từ trong Modal, đóng modal lại
+        bool isFromModal = (selectedReceipt != null && selectedReceipt.Id == item.Id);
+
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Xác nhận DUYỆT phiếu nhập #{item.Id.Substring(0, 8)}?");
+        
+        if (confirm)
+        {
+            var success = await StoreService.UpdateReceiptStatusAsync(item.Id, "COMPLETED");
+            
+            if (success)
+            {
+                item.GRNStatus = "COMPLETED";
+                await JSRuntime.InvokeVoidAsync("alert", "✅ Đã duyệt nhập kho thành công!");
+                
+                if (isFromModal) CloseModal(); // Đóng modal nếu duyệt từ bên trong
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "❌ Lỗi: Không thể duyệt phiếu này.");
+            }
+        }
+    }
+}

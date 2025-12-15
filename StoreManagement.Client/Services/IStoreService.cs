@@ -58,32 +58,38 @@ namespace StoreManagement.Client.Services
         Task<bool> CreatePublisherAsync(Publisher publisher);
         Task<bool> UpdatePublisherAsync(Publisher publisher);
         Task<bool> DeletePublisherAsync(string id);
-
+        
         // ==========================================
         // 7. KHÁCH HÀNG (CUSTOMERS)
         // ==========================================
         Task<List<Customer>> GetCustomersAsync();
         Task CreateCustomerAsync(Customer customer);
-        Task<List<Customer>> SearchCustomersAsync(string keyword);        
+        Task<List<Customer>> SearchCustomersAsync(string keyword);
+        // Overload hỗ trợ phân trang & tạo nhanh
         Task<ApiResponse<PaginationResponse<Customer>>> GetCustomersAsync(int pageNumber, int pageSize);
         Task<ApiResponse<bool>> CreateCustomerAsync(string name, string phone, string address);
         Task<Customer?> CreateCustomerAndGetAsync(string name, string phone, string address);
 
         // ==========================================
-        // 8. KHO HÀNG & HÓA ĐƠN (INVENTORY & DASHBOARD)
+        // 8. KHO HÀNG (INVENTORY RECEIPTS)
         // ==========================================
         Task<bool> CreateReceiptAsync(InventoryReceipt receipt);
+        Task<List<InventoryReceipt>> GetReceiptsAsync();
+        Task<bool> UpdateReceiptStatusAsync(string id, string status);
+        Task<InventoryReceipt?> GetReceiptByIdAsync(string id);
+
+        // ==========================================
+        // 9. HÓA ĐƠN & ĐƠN HÀNG (INVOICES & ORDERS)
+        // ==========================================
         Task<Invoice?> CreateInvoiceAsync(CreateInvoiceRequest request); 
         Task<bool> CreateOnlineInvoiceAsync(CreateInvoiceRequest request);
         Task<List<Invoice>> GetInvoicesAsync(); // Dùng cho Dashboard
-
         Task<ApiResponse<Invoice>> GetInvoiceByIdAsync(string id);
-
         Task<Invoice?> GetOrderByIdAsync(string id);
         Task<bool> CreateOrderAsync(Invoice order);
 
         // ==========================================
-        // 9. NGƯỜI DÙNG (SYSTEM USER)
+        // 10. NGƯỜI DÙNG (SYSTEM USER)
         // ==========================================
         Task<UserResponse?> GetUserProfileAsync();
     }
