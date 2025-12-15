@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace StoreManagement.Client.Services
@@ -18,6 +19,10 @@ namespace StoreManagement.Client.Services
         private readonly HttpClient _httpClient;
         private readonly ILocalStorageService _localStorage;
         private const string TokenKey = "authToken";
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public ApiService(HttpClient httpClient, ILocalStorageService localStorage)
         {
@@ -49,8 +54,8 @@ namespace StoreManagement.Client.Services
             {
             // Backend expects { Email, Password }
             var dto = new { Email = username, Password = password };
-            var response = await _httpClient.PostAsJsonAsync("api/auth/login", dto);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>() ?? 
+            var response = await _httpClient.PostAsJsonAsync("api/auth/login", dto, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>(_jsonOptions) ?? 
                     new ApiResponse<AuthResponse> { Success = false, Message = "Login failed" };
             }
             catch (Exception ex)
@@ -64,7 +69,7 @@ namespace StoreManagement.Client.Services
         // {
         //     try
         //     {
-        //         var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Employee>>>("api/users?PageNumber=1&PageSize=1000");
+        //         var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Employee>>>("api/users?PageNumber=1&PageSize=1000", _jsonOptions);
         //         if (response?.Success == true)
         //         {
         //             return new ApiResponse<List<Employee>>
@@ -87,8 +92,8 @@ namespace StoreManagement.Client.Services
         //     try
         //     {
         //         var dto = new { employee.Username, employee.Email, employee.PositionName, employee.Phone };
-        //         var response = await _httpClient.PostAsJsonAsync("api/users", dto);
-        //         return await response.Content.ReadFromJsonAsync<ApiResponse<Employee>>() ?? 
+        //         var response = await _httpClient.PostAsJsonAsync("api/users", dto, _jsonOptions);
+        //         return await response.Content.ReadFromJsonAsync<ApiResponse<Employee>>(_jsonOptions) ?? 
         //             new ApiResponse<Employee> { Success = false, Message = "Employee creation failed" };
         //     }
         //     catch (Exception ex)
@@ -102,8 +107,8 @@ namespace StoreManagement.Client.Services
         //     try
         //     {
         //         var dto = new { employee.Username, employee.Email, employee.PositionName, employee.Phone };
-        //         var response = await _httpClient.PutAsJsonAsync($"api/users/{id}", dto);
-        //         return await response.Content.ReadFromJsonAsync<ApiResponse<Employee>>() ?? 
+        //         var response = await _httpClient.PutAsJsonAsync($"api/users/{id}", dto, _jsonOptions);
+        //         return await response.Content.ReadFromJsonAsync<ApiResponse<Employee>>(_jsonOptions) ?? 
         //             new ApiResponse<Employee> { Success = false, Message = "Employee update failed" };
         //     }
         //     catch (Exception ex)
@@ -117,7 +122,7 @@ namespace StoreManagement.Client.Services
         //     try
         //     {
         //         var response = await _httpClient.DeleteAsync($"api/users/{id}");
-        //         return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
+        //         return await response.Content.ReadFromJsonAsync<ApiResponse>(_jsonOptions) ?? 
         //             new ApiResponse { Success = false, Message = "Employee deletion failed" };
         //     }
         //     catch (Exception ex)
@@ -131,7 +136,7 @@ namespace StoreManagement.Client.Services
         //{
         //    try
         //    {
-        //        var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<ShiftHistoryEntry>>>("api/timekeeping/history?PageNumber=1&PageSize=1000");
+        //        var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<ShiftHistoryEntry>>>("api/timekeeping/history?PageNumber=1&PageSize=1000", _jsonOptions);
         //        if (response?.Success == true)
         //        {
         //            return new ApiResponse<List<ShiftHistoryEntry>>
@@ -154,8 +159,8 @@ namespace StoreManagement.Client.Services
         //    try
         //    {
         //        await EnsureAuthHeaderAsync();
-        //        var response = await _httpClient.PostAsJsonAsync("api/timekeeping/start", new { });
-        //        return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
+        //        var response = await _httpClient.PostAsJsonAsync("api/timekeeping/start", new { }, _jsonOptions);
+        //        return await response.Content.ReadFromJsonAsync<ApiResponse>(_jsonOptions) ?? 
         //            new ApiResponse { Success = false, Message = "Start shift failed" };
         //    }
         //    catch (Exception ex)
@@ -169,8 +174,8 @@ namespace StoreManagement.Client.Services
         //    try
         //    {
         //        await EnsureAuthHeaderAsync();
-        //        var response = await _httpClient.PostAsJsonAsync("api/timekeeping/end", new { });
-        //        return await response.Content.ReadFromJsonAsync<ApiResponse>() ?? 
+        //        var response = await _httpClient.PostAsJsonAsync("api/timekeeping/end", new { }, _jsonOptions);
+        //        return await response.Content.ReadFromJsonAsync<ApiResponse>(_jsonOptions) ?? 
         //            new ApiResponse { Success = false, Message = "End shift failed" };
         //    }
         //    catch (Exception ex)
@@ -196,8 +201,8 @@ namespace StoreManagement.Client.Services
                     password = password,
                     email = customer.Email
                 };
-                var response = await _httpClient.PostAsJsonAsync("api/auth/register", dto);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>() ?? 
+                var response = await _httpClient.PostAsJsonAsync("api/auth/register", dto, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>(_jsonOptions) ?? 
                     new ApiResponse<AuthResponse> { Success = false, Message = "Registration failed" };
             }
             catch (Exception ex)
@@ -219,8 +224,8 @@ namespace StoreManagement.Client.Services
                     password = password,
                     email = email
                 };
-                var response = await _httpClient.PostAsJsonAsync("api/auth/register", dto);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>() ??
+                var response = await _httpClient.PostAsJsonAsync("api/auth/register", dto, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponse>>(_jsonOptions) ??
                     new ApiResponse<AuthResponse> { Success = false, Message = "Registration failed" };
             }
             catch (Exception ex)
@@ -236,8 +241,8 @@ namespace StoreManagement.Client.Services
             {
                 await EnsureAuthHeaderAsync();
                 var dto = new { Name = name, Phone = phone, Address = address };
-                var response = await _httpClient.PostAsJsonAsync("api/customers", dto);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<Customer>>() ?? 
+                var response = await _httpClient.PostAsJsonAsync("api/customers", dto, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<Customer>>(_jsonOptions) ?? 
                     new ApiResponse<Customer> { Success = false, Message = "Create customer failed" };
             }
             catch (Exception ex)
@@ -252,7 +257,7 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Customer>>>($"api/customers?PageNumber={pageNumber}&PageSize={pageSize}");
+                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Customer>>>($"api/customers?PageNumber={pageNumber}&PageSize={pageSize}", _jsonOptions);
                 return response ?? new ApiResponse<PaginationResponse<Customer>> { Success = false, Message = "Failed to get customers" };
             }
             catch (Exception ex)
@@ -267,7 +272,7 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                return await _httpClient.GetFromJsonAsync<ApiResponse<UserResponse>>("api/users/profile") ?? 
+                return await _httpClient.GetFromJsonAsync<ApiResponse<UserResponse>>("api/users/profile", _jsonOptions) ?? 
                     new ApiResponse<UserResponse> { Success = false, Message = "Failed to get profile" };
             }
             catch (Exception ex)
@@ -289,8 +294,8 @@ namespace StoreManagement.Client.Services
                     address = customer.Address,
                     dob = customer.Dob
                 };
-                var response = await _httpClient.PutAsJsonAsync($"api/customers/{customer.Id}", dto);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<Customer>>() ?? 
+                var response = await _httpClient.PutAsJsonAsync($"api/customers/{customer.Id}", dto, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<Customer>>(_jsonOptions) ?? 
                     new ApiResponse<Customer> { Success = false, Message = "Update failed" };
             }
             catch (Exception ex)
@@ -305,7 +310,7 @@ namespace StoreManagement.Client.Services
             {
                 await EnsureAuthHeaderAsync();
                 var response = await _httpClient.DeleteAsync($"api/customers/{id}");
-                return await response.Content.ReadFromJsonAsync<ApiResponse>() ??
+                return await response.Content.ReadFromJsonAsync<ApiResponse>(_jsonOptions) ??
                     new ApiResponse { Success = false, Message = "Delete failed" };
             }
             catch (Exception ex)
@@ -319,7 +324,7 @@ namespace StoreManagement.Client.Services
         {
             try
             {
-                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>("api/products?PageNumber=1&PageSize=1000");
+                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>("api/products?PageNumber=1&PageSize=1000", _jsonOptions);
                 if (response?.Success == true)
                 {
                     return new ApiResponse<List<Book>>
@@ -341,7 +346,7 @@ namespace StoreManagement.Client.Services
         {
             try
             {
-                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>($"api/products/search?SearchTerm={System.Net.WebUtility.UrlEncode(searchTerm)}&PageNumber={pageNumber}&PageSize={pageSize}");
+                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Book>>>($"api/products/search?SearchTerm={System.Net.WebUtility.UrlEncode(searchTerm)}&PageNumber={pageNumber}&PageSize={pageSize}", _jsonOptions);
                 if (response?.Success == true)
                 {
                     return new ApiResponse<List<Book>>
@@ -363,7 +368,7 @@ namespace StoreManagement.Client.Services
         {
             try
             {
-                return await _httpClient.GetFromJsonAsync<ApiResponse<Book>>($"api/products/{id}") ?? 
+                return await _httpClient.GetFromJsonAsync<ApiResponse<Book>>($"api/products/{id}", _jsonOptions) ?? 
                     new ApiResponse<Book> { Success = false, Message = "Product not found" };
             }
             catch (Exception ex)
@@ -385,7 +390,7 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Invoice>>>("api/orders?PageNumber=1&PageSize=1000");
+                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<Invoice>>>("api/orders?PageNumber=1&PageSize=1000", _jsonOptions);
                 if (response?.Success == true)
                 {
                     return new ApiResponse<List<Invoice>>
@@ -408,8 +413,8 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.PostAsJsonAsync("api/orders/online", request);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                var response = await _httpClient.PostAsJsonAsync("api/orders/online", request, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>(_jsonOptions) ??
                     new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Order creation failed" };
             }
             catch (Exception ex)
@@ -423,8 +428,8 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.PostAsJsonAsync("api/orders/pos", request);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                var response = await _httpClient.PostAsJsonAsync("api/orders/pos", request, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>(_jsonOptions) ??
                     new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "POS Order creation failed" };
             }
             catch (Exception ex)
@@ -438,7 +443,7 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<AdminInvoiceResponse>>>($"api/orders?PageNumber={pageNumber}&PageSize={pageSize}");
+                var response = await _httpClient.GetFromJsonAsync<ApiResponse<PaginationResponse<AdminInvoiceResponse>>>($"api/orders?PageNumber={pageNumber}&PageSize={pageSize}", _jsonOptions);
                 return response ?? new ApiResponse<PaginationResponse<AdminInvoiceResponse>> { Success = false, Message = "Failed to get admin invoices" };
             }
             catch (Exception ex)
@@ -452,7 +457,7 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                return await _httpClient.GetFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>($"api/orders/detail/{id}") ??
+                return await _httpClient.GetFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>($"api/orders/detail/{id}", _jsonOptions) ??
                     new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Admin invoice not found" };
             }
             catch (Exception ex)
@@ -467,7 +472,7 @@ namespace StoreManagement.Client.Services
             try
             {            
                 await EnsureAuthHeaderAsync();
-                var result = await _httpClient.GetFromJsonAsync<ApiResponse<Invoice>>($"api/orders/detail/{id}");
+                var result = await _httpClient.GetFromJsonAsync<ApiResponse<Invoice>>($"api/orders/detail/{id}", _jsonOptions);
                 return result?.Data;
             }
             catch (Exception ex)
@@ -487,7 +492,7 @@ namespace StoreManagement.Client.Services
                 // A real implementation would call a backend endpoint like "api/orders"
                 // and map the client `Invoice` model to a backend request DTO.
                 Console.WriteLine($"Simulating creation of order: {order.Id}");
-                var response = await _httpClient.PostAsJsonAsync("api/orders", order); // Theoretical endpoint
+                var response = await _httpClient.PostAsJsonAsync("api/orders", order, _jsonOptions); // Theoretical endpoint
                 // Assuming success for build purposes, or check response.IsSuccessStatusCode
                 return response.IsSuccessStatusCode;
             }
@@ -503,8 +508,8 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.PutAsJsonAsync($"api/orders/{id}", request);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                var response = await _httpClient.PutAsJsonAsync($"api/orders/{id}", request, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>(_jsonOptions) ??
                     new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Invoice update failed" };
             }
             catch (Exception ex)
@@ -518,8 +523,8 @@ namespace StoreManagement.Client.Services
             try
             {
                 await EnsureAuthHeaderAsync();
-                var response = await _httpClient.PatchAsJsonAsync($"api/orders/{id}", request);
-                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>() ??
+                var response = await _httpClient.PatchAsJsonAsync($"api/orders/{id}", request, _jsonOptions);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<AdminInvoiceDetailResponse>>(_jsonOptions) ??
                     new ApiResponse<AdminInvoiceDetailResponse> { Success = false, Message = "Invoice status update failed" };
             }
             catch (Exception ex)

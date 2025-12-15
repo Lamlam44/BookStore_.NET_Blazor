@@ -61,7 +61,7 @@ else
                     <td>@invoice.FinalAmount.ToString("C")</td>
                     <td><span class="badge @GetStatusBadgeClass(invoice.Status)">@invoice.Status</span></td>
                     <td>@invoice.PaymentMethod</td>
-                    <td><span class="badge @GetStatusBadgeClass(invoice.PaymentStatus)">@invoice.PaymentStatus</span></td>
+                    <td><span class="badge @GetPaymentStatusBadgeClass(invoice.PaymentStatus)">@invoice.PaymentStatus</span></td>
                     <td>@invoice.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                     <td>
                         <div class="btn-group" role="group">
@@ -116,10 +116,10 @@ else
                             <label for="status" class="form-label">Trạng thái Hóa đơn</label>
                             <InputSelect @bind-Value="updateStatusRequest.Status" class="form-select" id="status">
                                 <option value="">Chọn trạng thái</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Processing">Processing</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="SHIPPED">Shipped</option>
+                                <option value="DELIVERED">Delivered</option>
+                                <option value="CANCELLED">Cancelled</option>
                             </InputSelect>
                             <ValidationMessage For="@(() => updateStatusRequest.Status)" />
                         </div>
@@ -127,10 +127,9 @@ else
                             <label for="paymentStatus" class="form-label">Trạng thái Thanh toán</label>
                             <InputSelect @bind-Value="updateStatusRequest.PaymentStatus" class="form-select" id="paymentStatus">
                                 <option value="">Chọn trạng thái thanh toán</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Paid">Paid</option>
-                                <option value="Refunded">Refunded</option>
-                                <option value="Failed">Failed</option>
+                                <option value="PAID">Paid</option>
+                                <option value="UNPAID">Unpaid</option>
+                                <option value="PENDING">Pending</option>
                             </InputSelect>
                             <ValidationMessage For="@(() => updateStatusRequest.PaymentStatus)" />
                         </div>
@@ -217,10 +216,20 @@ else
     {
         return status switch
         {
-            "Completed" or "Paid" => "bg-success",
-            "Processing" or "Pending" => "bg-warning text-dark",
-            "Cancelled" or "Failed" => "bg-danger",
-            "Refunded" => "bg-info",
+            "DELIVERED" => "bg-success",
+            "PENDING" or "SHIPPED" => "bg-warning text-dark",
+            "CANCELLED" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetPaymentStatusBadgeClass(string paymentStatus)
+    {
+        return (paymentStatus ?? string.Empty).ToUpper() switch
+        {
+            "PAID" => "bg-success",
+            "PENDING" => "bg-warning text-dark",
+            "UNPAID" => "bg-danger",
             _ => "bg-secondary"
         };
     }

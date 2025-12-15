@@ -38,7 +38,7 @@ else
                 </div>
                 <div class="col-md-6">
                     <p><strong>Phương thức thanh toán:</strong> @invoice.PaymentMethod</p>
-                    <p><strong>Trạng thái thanh toán:</strong> <span class="badge @GetStatusBadgeClass(invoice.PaymentStatus)">@invoice.PaymentStatus</span></p>
+                    <p><strong>Trạng thái thanh toán:</strong> <span class="badge @GetPaymentStatusBadgeClass(invoice.PaymentStatus)">@invoice.PaymentStatus</span></p>
                     <p><strong>Thời gian thanh toán:</strong> @(invoice.PaymentTime?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "N/A")</p>
                     <p><strong>Ghi chú thanh toán:</strong> @(string.IsNullOrWhiteSpace(invoice.PaymentNote) ? "Không" : invoice.PaymentNote)</p>
                 </div>
@@ -170,10 +170,20 @@ else
     {
         return status switch
         {
-            "Completed" or "Paid" => "bg-success",
-            "Processing" or "Pending" => "bg-warning text-dark",
-            "Cancelled" or "Failed" => "bg-danger",
-            "Refunded" => "bg-info",
+            "DELIVERED" => "bg-success",
+            "PENDING" or "SHIPPED" => "bg-warning text-dark",
+            "CANCELLED" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetPaymentStatusBadgeClass(string paymentStatus)
+    {
+        return (paymentStatus ?? string.Empty).ToUpper() switch
+        {
+            "PAID" => "bg-success",
+            "PENDING" => "bg-warning text-dark",
+            "UNPAID" => "bg-danger",
             _ => "bg-secondary"
         };
     }
