@@ -4,57 +4,279 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using StoreManagement.Client.Models
 @layout StoreManagement.Client.Layout.CustomerLayout
 @inject ApiService ApiService
 @inject CartService CartService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<h3>Sản Phẩm</h3>
+<PageTitle>Tủ Sách | BookStore</PageTitle>
 
-<div class="mb-3 d-flex">
-    <input class="form-control me-2" placeholder="Tìm kiếm sản phẩm" @bind="searchTerm" @bind:event="oninput" />
-    <button class="btn btn-outline-primary" @onclick="Search">Tìm</button>
-</div>
+<style>
+    /* Thanh tìm kiếm */
+    .search-wrapper {
+        position: relative;
+        max-width: 400px;
+        width: 100%;
+    }
+    .search-input {
+        padding-right: 50px;
+        border-radius: 50px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        transition: all 0.3s;
+    }
+    .search-input:focus {
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        border-color: #4e73df;
+    }
+    .search-btn {
+        position: absolute;
+        right: 5px;
+        top: 3px;
+        bottom: 3px;
+        border-radius: 50%;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-@if (isLoading)
-{
-    <p><em>Loading...</em></p>
-}
-else if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger">@errorMessage</div>
-}
-else if (products != null)
-{
-    <div class="row">
-        @foreach (var product in products)
-        {
-            <div class="col-md-4 col-lg-3 mb-4">
-                <div class="card">
-                    <img src="@product.Image" class="card-img-top" alt="@product.Title">
-                    <div class="card-body">
-                        <h5 class="card-title">@product.Title</h5>
-                        <p class="card-text">@product.RetailPrice.ToString("C")</p>
-                        <a class="btn btn-sm btn-secondary me-2" href="/products/@product.Id">Chi tiết</a>
-                        <button class="btn btn-primary" @onclick="() => AddToCart(product)">Add to Cart</button>
+    /* Card Sản phẩm */
+    .book-card {
+        border: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        background: #fff;
+        overflow: hidden;
+    }
+    .book-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    }
+    
+    .book-image-container {
+        height: 240px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        position: relative;
+    }
+    
+    .book-img {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+        transition: transform 0.5s ease;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    }
+    
+    .book-card:hover .book-img {
+        transform: scale(1.08);
+    }
+
+    .book-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 2px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Giới hạn 2 dòng */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 40px; /* Chiều cao cố định cho 2 dòng */
+        line-height: 1.3;
+    }
+
+    /* Style cho tên tác giả mới thêm */
+    .book-author {
+        font-size: 0.85rem;
+        color: #6c757d;
+        white-space: nowrap; 
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 5px;
+    }
+
+    .book-price {
+        color: #dc3545;
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+
+    .btn-detail {
+        background-color: #f1f3f5;
+        color: #495057;
+        font-weight: 600;
+        border: none;
+    }
+    .btn-detail:hover { background-color: #e9ecef; color: #000; }
+</style>
+
+<div class="container py-4">
+    @* --- HEADER & SEARCH --- *@
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 gap-3">
+        <div>
+            <h2 class="fw-bold text-primary m-0"><i class="bi bi-collection me-2"></i>Tủ Sách</h2>
+            <p class="text-muted m-0 small">Khám phá kho tàng tri thức vô tận</p>
+        </div>
+        
+        <div class="search-wrapper">
+            <input class="form-control search-input" 
+                   placeholder="Nhập tên sách, tác giả..." 
+                   @bind="searchTerm" 
+                   @bind:event="oninput" 
+                   @onkeydown="HandleEnter" />
+            <button class="btn btn-primary search-btn" @onclick="Search">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </div>
+
+    @* --- CONTENT --- *@
+    @if (isLoading)
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="col">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div style="height: 240px; background-color: #e9ecef;" class="card-img-top placeholder-wave"></div>
+                        <div class="card-body">
+                            <h5 class="card-title placeholder-glow"><span class="placeholder col-10 rounded"></span></h5>
+                            <p class="card-text placeholder-glow"><span class="placeholder col-6 rounded"></span></p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        }
-    </div>
-}
+            }
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger shadow-sm rounded-3">
+            <i class="bi bi-exclamation-octagon me-2"></i> @errorMessage
+        </div>
+    }
+    else if (products == null || !products.Any())
+    {
+        <div class="text-center py-5">
+            <img src="/images/empty-search.svg" style="width: 120px; opacity: 0.5; margin-bottom: 20px;" onerror="this.style.display='none'"/>
+            <h5 class="text-muted">Không tìm thấy sản phẩm nào phù hợp.</h5>
+            <button class="btn btn-outline-primary mt-2 rounded-pill" @onclick="ReloadAll">Xem tất cả sách</button>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            @foreach (var product in products)
+            {
+                <div class="col">
+                    <div class="card h-100 book-card shadow-sm">
+                        @* Ảnh *@
+                        <div class="book-image-container cursor-pointer" @onclick='() => Navigation.NavigateTo($"/products/{product.Id}")' style="cursor: pointer;">
+                            <img src="@(string.IsNullOrEmpty(product.Image) ? "/images/no-image.svg" : product.Image)" 
+                                 class="book-img" 
+                                 alt="@product.Title"
+                                 onerror="this.src='/images/no-image.svg'">
+                        </div>
+
+                        <div class="card-body d-flex flex-column pt-0">
+                            @* Tiêu đề *@
+                            <div class="book-title mt-3" title="@product.Title">
+                                <a href="/products/@product.Id" class="text-decoration-none text-dark stretched-link">@product.Title</a>
+                            </div>
+                            
+                            @* --- PHẦN MỚI THÊM: TÁC GIẢ --- *@
+                            <div class="book-author" title="@product.Author">
+                                <i class="bi bi-pen me-1 small"></i> @(string.IsNullOrEmpty(product.Author) ? "Đang cập nhật" : product.Author)
+                            </div>
+                            @* -------------------------------- *@
+
+                            @* Giá *@
+                            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+                                <span class="book-price">@product.RetailPrice.ToString("N0") đ</span>
+                            </div>
+                        </div>
+
+                        @* Footer Nút *@
+                        <div class="card-footer bg-white border-top-0 d-flex gap-2 pb-3 px-3">
+                            <a href="/products/@product.Id" class="btn btn-detail rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;" title="Xem chi tiết">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            <button class="btn btn-danger flex-grow-1 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => AddToCart(product)"
+                                    style="position: relative; z-index: 2;">
+                                <i class="bi bi-cart-plus-fill"></i> Thêm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
 
 @code {
     private List<Book>? products;
     private bool isLoading = true;
     private string? errorMessage;
     private string searchTerm = string.Empty;
+    
     [Parameter]
     [SupplyParameterFromQuery(Name = "search")]
     public string? search { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            searchTerm = search;
+            await Search();
+        }
+        else
+        {
+            await LoadProducts();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (search != searchTerm && !string.IsNullOrWhiteSpace(search))
+        {
+            searchTerm = search;
+            await Search();
+        }
+        else if (string.IsNullOrWhiteSpace(search) && !isLoading && products == null) 
+        {
+             await LoadProducts();
+        }
+    }
+
+    private async Task HandleEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Search();
+        }
+    }
+
+    private async Task ReloadAll()
+    {
+        searchTerm = string.Empty;
+        Navigation.NavigateTo("/products");
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        errorMessage = null;
         try
         {
             var response = await ApiService.GetProductsAsync();
@@ -64,25 +286,16 @@ else if (products != null)
             }
             else
             {
-                errorMessage = response.Message ?? "An unknown error occurred.";
+                errorMessage = response.Message ?? "Không thể tải danh sách sản phẩm.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to load products: {ex.Message}";
+            errorMessage = $"Lỗi kết nối: {ex.Message}";
         }
         finally
         {
             isLoading = false;
-        }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            searchTerm = search;
-            await Search();
         }
     }
 
@@ -94,15 +307,18 @@ else if (products != null)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                var response = await ApiService.GetProductsAsync();
-                if (response.Success) products = response.Data;
-                else errorMessage = response.Message;
+                await LoadProducts();
+                return;
+            }
+
+            var response = await ApiService.SearchProductsAsync(searchTerm);
+            if (response.Success)
+            {
+                products = response.Data;
             }
             else
             {
-                var response = await ApiService.SearchProductsAsync(searchTerm);
-                if (response.Success) products = response.Data;
-                else errorMessage = response.Message;
+                errorMessage = response.Message;
             }
         }
         catch (Exception ex)
@@ -118,12 +334,13 @@ else if (products != null)
     private void AddToCart(Book product)
     {
         CartService.AddToCart(product);
-        ShowToast("Đã thêm vào giỏ hàng", product.Title);
+        ShowToast("Thành công", $"Đã thêm '{product.Title}' vào giỏ");
     }
 
-    private async void ShowToast(string title, string message)
+    private void ShowToast(string title, string message)
     {
-        var containerId = "toast-container";
+        var id = $"toast-{Guid.NewGuid():N}";
+        var containerId = "toast-container-custom";
         var script = $@"
             (function() {{
                 let container = document.getElementById('{containerId}');
@@ -131,30 +348,46 @@ else if (products != null)
                     container = document.createElement('div');
                     container.id = '{containerId}';
                     container.style.position = 'fixed';
-                    container.style.top = '20px';
+                    container.style.top = '80px'; 
                     container.style.right = '20px';
-                    container.style.zIndex = '5000';
+                    container.style.zIndex = '9999';
+                    container.style.display = 'flex';
+                    container.style.flexDirection = 'column';
+                    container.style.gap = '10px';
                     document.body.appendChild(container);
                 }}
                 const el = document.createElement('div');
-                el.style.background = '#198754';
-                el.style.color = '#fff';
-                el.style.padding = '10px 14px';
-                el.style.marginBottom = '8px';
+                el.id = '{id}';
+                el.style.background = '#fff';
+                el.style.color = '#333';
+                el.style.borderLeft = '5px solid #198754';
+                el.style.padding = '15px 20px';
                 el.style.borderRadius = '8px';
-                el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                el.style.boxShadow = '0 5px 15px rgba(0,0,0,0.15)';
                 el.style.fontSize = '14px';
-                el.style.maxWidth = '340px';
-                el.style.pointerEvents = 'none';
-                el.innerHTML = `<strong>${title}</strong><div style='font-size:12px;opacity:.9;'>${message}</div>`;
+                el.style.minWidth = '300px';
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                el.style.transition = 'all 0.3s ease';
+                el.innerHTML = `<div style='display:flex;align-items:center;gap:10px'>
+                                    <i class='bi bi-check-circle-fill' style='color:#198754;font-size:1.2rem'></i>
+                                    <div>
+                                        <div style='font-weight:700;margin-bottom:2px'>${title}</div>
+                                        <div style='color:#666;font-size:0.9rem'>${message}</div>
+                                    </div>
+                                </div>`;
                 container.appendChild(el);
                 setTimeout(() => {{
-                    el.style.transition = 'opacity .3s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateX(0)';
+                }}, 10);
+                setTimeout(() => {{
                     el.style.opacity = '0';
+                    el.style.transform = 'translateX(20px)';
                     setTimeout(() => {{ el.remove(); }}, 300);
-                }}, 1800);
+                }}, 2500);
             }})();
         ";
-        await JSRuntime.InvokeVoidAsync("eval", script);
+        _ = JSRuntime.InvokeVoidAsync("eval", script);
     }
 }
